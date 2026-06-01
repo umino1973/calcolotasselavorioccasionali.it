@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaxCopilot</title>
+
+  <style>
+    body {
+      font-family: Arial;
+      background: #f6f7fb;
+      margin: 0;
+    }
+
+    .container {
+      max-width: 650px;
+      margin: 30px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    }
+
+    h1 { text-align:center; }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      font-size: 16px;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 8px;
+      background: #2b6fff;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .box {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f9f9f9;
+      border-radius: 10px;
+      line-height: 1.5;
+    }
+
+    .premium {
+      background: #111;
+      color: white;
+      text-align: center;
+      padding: 12px;
+      border-radius: 10px;
+      margin-top: 20px;
+      font-size: 14px;
+    }
+
+    .tag {
+      display:inline-block;
+      padding:4px 8px;
+      background:#eee;
+      border-radius:6px;
+      font-size:12px;
+      margin-bottom:10px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h1>TaxCopilot</h1>
+
+  <div class="tag">AI fiscale + simulazione + PDF</div>
+
+  <input id="income" type="number" placeholder="Guadagni annuali (es. 10000)">
+
+  <button onclick="calcola()">Calcola situazione</button>
+
+  <div id="result" class="box"></div>
+
+  <button onclick="generaPDF()">?? Scarica PDF annuale (FREE)</button>
+
+  <div class="premium">
+    ?? PREMIUM: AI avanzata + storico + analisi fiscale completa
+  </div>
+
+  <h3 style="margin-top:30px;">?? AI fiscale</h3>
+
+  <input id="msg" placeholder="Es. ho guadagnato 9000 euro">
+  <button onclick="ai()">Chiedi AI</button>
+
+  <div id="ai" class="box"></div>
+
+</div>
+
+<script>
+
+//
+// =====================
+// SIMULATORE
+// =====================
+//
+
+function calcola() {
+  let income = parseFloat(document.getElementById("income").value);
+  let out = document.getElementById("result");
+
+  if (!income) {
+    out.innerHTML = "Inserisci un valore valido.";
+    return;
+  }
+
+  let rate = income <= 5000 ? 0.04 :
+             income <= 15000 ? 0.14 : 0.22;
+
+  let acc = income * rate;
+  let net = income - acc;
+
+  let risk =
+    income <= 5000 ? "basso rischio fiscale" :
+    income <= 15000 ? "attenzione a continuità attività" :
+    "possibile attività strutturata";
+
+  out.innerHTML =
+    "?? Accantonamento: €" + acc.toFixed(2) +
+    "<br>?? Netto: €" + net.toFixed(2) +
+    "<br>?? Scenario: " + risk;
+}
+
+//
+// =====================
+// AI SIMULATA
+// =====================
+//
+
+function ai() {
+  let text = document.getElementById("msg").value.toLowerCase();
+  let out = document.getElementById("ai");
+
+  let num = text.match(/\d+/g);
+  if (!num) {
+    out.innerHTML = "Scrivi tipo: ho guadagnato 8000 euro";
+    return;
+  }
+
+  let income = parseInt(num[0]);
+
+  let analysis =
+    income <= 3000 ? "attività molto occasionale" :
+    income <= 5000 ? "attività occasionale" :
+    income <= 15000 ? "possibile continuità fiscale" :
+    "attività probabilmente strutturata";
+
+  out.innerHTML =
+    "?? Analisi: " + analysis +
+    "<br>?? Accantonamento stimato: €" + (income * 0.15).toFixed(2);
+}
+
+//
+// =====================
+// PDF GENERATION (FREE)
+// =====================
+//
+
+function generaPDF() {
+
+  let income = document.getElementById("income").value || 0;
+
+  let content =
+`TAXCOPILOT - REPORT ANNUALE
+
+Reddito dichiarato: €${income}
+
+Questo documento è una simulazione automatica.
+
+ATTENZIONE:
+Non costituisce consulenza fiscale.
+
+-- TaxCopilot`;
+
+  let blob = new Blob([content], { type: "text/plain" });
+  let link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "taxcopilot-report.txt";
+  link.click();
+}
+
+</script>
+
+</body>
+</html>
