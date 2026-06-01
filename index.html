@@ -7,7 +7,7 @@
 
   <style>
     body {
-      font-family: Arial;
+      font-family: Arial, sans-serif;
       background: #f6f7fb;
       margin: 0;
     }
@@ -21,7 +21,7 @@
       box-shadow: 0 10px 30px rgba(0,0,0,0.08);
     }
 
-    h1 { text-align:center; }
+    h1 { text-align: center; }
 
     input {
       width: 100%;
@@ -87,28 +87,22 @@
 
   <div id="result" class="box"></div>
 
-  <button onclick="generaPDF()">?? Scarica PDF annuale (FREE)</button>
+  <button onclick="generaPDF()">ðŸ“„ Scarica PDF annuale (FREE)</button>
 
   <div class="premium">
-    ?? PREMIUM: AI avanzata + storico + analisi fiscale completa
+    ðŸ”µ PREMIUM: AI avanzata + storico + analisi fiscale completa
   </div>
 
-  <h3 style="margin-top:30px;">?? AI fiscale</h3>
+  <h3 style="margin-top:30px;">ðŸ§  AI fiscale</h3>
 
   <input id="msg" placeholder="Es. ho guadagnato 9000 euro">
-  <button onclick="ai()">Chiedi AI</button>
+  <button onclick="ai()">Chiedi allâ€™AI</button>
 
   <div id="ai" class="box"></div>
 
 </div>
 
 <script>
-
-//
-// =====================
-// SIMULATORE
-// =====================
-//
 
 function calcola() {
   let income = parseFloat(document.getElementById("income").value);
@@ -126,21 +120,15 @@ function calcola() {
   let net = income - acc;
 
   let risk =
-    income <= 5000 ? "basso rischio fiscale" :
-    income <= 15000 ? "attenzione a continuità attività" :
-    "possibile attività strutturata";
+    income <= 5000 ? "Basso rischio fiscale" :
+    income <= 15000 ? "Attenzione: possibile continuitÃ  attivitÃ " :
+    "Possibile attivitÃ  strutturata";
 
   out.innerHTML =
-    "?? Accantonamento: €" + acc.toFixed(2) +
-    "<br>?? Netto: €" + net.toFixed(2) +
-    "<br>?? Scenario: " + risk;
+    "ðŸ’° Accantonamento: â‚¬" + acc.toFixed(2) +
+    "<br>ðŸ“Š Netto stimato: â‚¬" + net.toFixed(2) +
+    "<br>ðŸ§  Scenario: " + risk;
 }
-
-//
-// =====================
-// AI SIMULATA
-// =====================
-//
 
 function ai() {
   let text = document.getElementById("msg").value.toLowerCase();
@@ -155,21 +143,15 @@ function ai() {
   let income = parseInt(num[0]);
 
   let analysis =
-    income <= 3000 ? "attività molto occasionale" :
-    income <= 5000 ? "attività occasionale" :
-    income <= 15000 ? "possibile continuità fiscale" :
-    "attività probabilmente strutturata";
+    income <= 3000 ? "AttivitÃ  molto occasionale" :
+    income <= 5000 ? "AttivitÃ  occasionale" :
+    income <= 15000 ? "Possibile continuitÃ  fiscale" :
+    "AttivitÃ  probabilmente strutturata";
 
   out.innerHTML =
-    "?? Analisi: " + analysis +
-    "<br>?? Accantonamento stimato: €" + (income * 0.15).toFixed(2);
+    "ðŸ§  Analisi: " + analysis +
+    "<br>ðŸ’° Accantonamento stimato: â‚¬" + (income * 0.15).toFixed(2);
 }
-
-//
-// =====================
-// PDF GENERATION (FREE)
-// =====================
-//
 
 function generaPDF() {
 
@@ -178,16 +160,16 @@ function generaPDF() {
   let content =
 `TAXCOPILOT - REPORT ANNUALE
 
-Reddito dichiarato: €${income}
+Reddito dichiarato: â‚¬${income}
 
-Questo documento è una simulazione automatica.
+Questo documento Ã¨ una simulazione automatica.
 
 ATTENZIONE:
 Non costituisce consulenza fiscale.
 
 -- TaxCopilot`;
 
-  let blob = new Blob([content], { type: "text/plain" });
+  let blob = new Blob([content], { type: "text/plain;charset=utf-8" });
   let link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
   link.download = "taxcopilot-report.txt";
