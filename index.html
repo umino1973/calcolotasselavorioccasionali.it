@@ -1,413 +1,235 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>TaxCopilot</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TaxCopilot Wizard</title>
 
 <style>
-
-body{
-    margin:0;
-    font-family:Arial, sans-serif;
-    background:#f4f7fb;
-    color:#222;
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    background: #0f172a;
+    color: #e2e8f0;
 }
 
-.container{
-    max-width:700px;
-    margin:40px auto;
-    background:white;
-    padding:30px;
-    border-radius:16px;
-    box-shadow:0 10px 30px rgba(0,0,0,.08);
+.container {
+    max-width: 700px;
+    margin: auto;
+    padding: 40px 20px;
 }
 
-h1{
-    text-align:center;
-    margin-bottom:5px;
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
 }
 
-.subtitle{
-    text-align:center;
-    color:#666;
-    margin-bottom:10px;
+.card {
+    background: #1e293b;
+    padding: 25px;
+    border-radius: 12px;
 }
 
-.hero{
-    text-align:center;
-    margin-bottom:25px;
+button {
+    padding: 10px 15px;
+    margin: 10px 5px 0 0;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #38bdf8;
+    color: black;
+    font-weight: bold;
 }
 
-.cta{
-    display:inline-block;
-    margin-top:10px;
-    padding:12px 18px;
-    background:#2b6fff;
-    color:white;
-    border-radius:10px;
-    text-decoration:none;
+button.secondary {
+    background: #334155;
+    color: white;
 }
 
-.tag{
-    display:inline-block;
-    background:#eef3ff;
-    color:#2b6fff;
-    padding:6px 12px;
-    border-radius:8px;
-    font-size:13px;
-    margin-bottom:20px;
+input, select {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 8px;
+    border: none;
 }
 
-input,select{
-    width:100%;
-    padding:12px;
-    margin-top:10px;
-    border-radius:8px;
-    border:1px solid #ddd;
-    font-size:16px;
-    box-sizing:border-box;
+.step {
+    display: none;
 }
 
-button{
-    width:100%;
-    padding:14px;
-    margin-top:12px;
-    border:none;
-    border-radius:10px;
-    background:#2b6fff;
-    color:white;
-    font-size:16px;
-    cursor:pointer;
+.step.active {
+    display: block;
 }
 
-button:hover{
-    opacity:0.95;
+.result {
+    white-space: pre-wrap;
+    background: #0b1220;
+    padding: 15px;
+    border-radius: 10px;
+    margin-top: 20px;
 }
-
-.box{
-    margin-top:20px;
-    background:#f9fafc;
-    padding:16px;
-    border-radius:10px;
-    line-height:1.6;
-}
-
-.progress{
-    width:100%;
-    height:14px;
-    background:#e8e8e8;
-    border-radius:20px;
-    overflow:hidden;
-    margin-top:10px;
-}
-
-.bar{
-    height:100%;
-    background:#2b6fff;
-    width:0%;
-}
-
-.premium{
-    margin-top:25px;
-    background:#111;
-    color:white;
-    padding:16px;
-    border-radius:12px;
-    text-align:center;
-}
-
-.small{
-    color:#777;
-    font-size:13px;
-}
-
-section{
-    margin-top:30px;
-}
-
 </style>
 </head>
 
 <body>
 
 <div class="container">
+    <h1>TaxCopilot Wizard</h1>
 
-<!-- HERO -->
-<div class="hero">
+    <div class="card">
 
-<h1>TaxCopilot</h1>
+        <!-- STEP 1 -->
+        <div class="step active" id="step1">
+            <h2>Che tipo di attività fai?</h2>
+            <select id="activity">
+                <option value="dogsitter">Dogsitter / pet care</option>
+                <option value="freelance">Freelance digitale</option>
+                <option value="occasionali">Lavori occasionali</option>
+                <option value="altro">Altro</option>
+            </select>
+            <button onclick="nextStep()">Avanti</button>
+        </div>
 
-<div class="subtitle">
-L'assistente per lavoratori occasionali e micro attività
-</div>
+        <!-- STEP 2 -->
+        <div class="step" id="step2">
+            <h2>Guadagno annuo stimato (€)</h2>
+            <input type="number" id="income" placeholder="es. 12000"/>
+            <button onclick="prevStep()" class="secondary">Indietro</button>
+            <button onclick="nextStep()">Avanti</button>
+        </div>
 
-<a href="#calcolatore" class="cta">Calcola ora</a>
+        <!-- STEP 3 -->
+        <div class="step" id="step3">
+            <h2>Quanto è stabile il lavoro?</h2>
+            <select id="continuity">
+                <option value="occasionale">Occasionale</option>
+                <option value="semi">Semi-regolare</option>
+                <option value="regolare">Regolare</option>
+                <option value="full">Full-time</option>
+            </select>
+            <button onclick="prevStep()" class="secondary">Indietro</button>
+            <button onclick="nextStep()">Avanti</button>
+        </div>
 
-</div>
+        <!-- STEP 4 -->
+        <div class="step" id="step4">
+            <h2>Hai costi?</h2>
+            <select id="costs">
+                <option value="none">Nessuno</option>
+                <option value="low">Bassi</option>
+                <option value="medium">Medi</option>
+                <option value="high">Alti</option>
+            </select>
+            <button onclick="prevStep()" class="secondary">Indietro</button>
+            <button onclick="nextStep()">Avanti</button>
+        </div>
 
-<div class="tag">
-Simulazione fiscale • Analisi rischio • Report
-</div>
+        <!-- STEP 5 -->
+        <div class="step" id="step5">
+            <h2>Obiettivo</h2>
+            <select id="goal">
+                <option value="extra">Guadagno extra</option>
+                <option value="stable">Reddito stabile</option>
+                <option value="main">Lavoro principale</option>
+                <option value="scale">Crescita/impresa</option>
+            </select>
 
-<!-- CALCOLATORE -->
-<section id="calcolatore">
+            <button onclick="prevStep()" class="secondary">Indietro</button>
+            <button onclick="calculate()">Analizza</button>
+        </div>
 
-<h3>Inserisci i tuoi dati</h3>
+        <!-- RESULT -->
+        <div class="step" id="resultStep">
+            <h2>Risultato</h2>
+            <div class="result" id="result"></div>
+            <button onclick="restart()">Ricomincia</button>
+        </div>
 
-<input id="income" type="number" placeholder="Guadagni annuali (€)">
-
-<select id="activity">
-<option value="">Tipo attività</option>
-<option>Dogsitter</option>
-<option>Petsitter</option>
-<option>Babysitter</option>
-<option>Freelance</option>
-<option>Ripetizioni</option>
-<option>Altro</option>
-</select>
-
-<input id="clients" type="number" placeholder="Numero clienti">
-
-<button onclick="calcola()">
-Analizza situazione
-</button>
-
-<div id="result" class="box">
-Inserisci i dati e premi "Analizza situazione"
-</div>
-
-</section>
-
-<!-- TRUST -->
-<section id="trust">
-
-<h3>Perché usare TaxCopilot</h3>
-
-<ul>
-<li>✔ Semplice e immediato</li>
-<li>✔ Pensato per lavori occasionali</li>
-<li>✔ Nessun dato salvato</li>
-<li>✔ Simulazione informativa non fiscale</li>
-</ul>
-
-</section>
-
-<!-- MONITOR -->
-<section>
-
-<h3>Monitoraggio reddito</h3>
-
-<div id="incomeText">
-Guadagni registrati: €0
-</div>
-
-<div class="progress">
-<div class="bar" id="bar"></div>
-</div>
-
-<div class="small">
-Indicatore verso soglia €5.000
-</div>
-
-</section>
-
-<!-- REPORT -->
-<section>
-
-<button onclick="generaReport()">
-📄 Scarica report
-</button>
-
-</section>
-
-<!-- ASSISTENTE -->
-<section>
-
-<h3>🧠 Assistente fiscale</h3>
-
-<input id="msg" placeholder="Es. ho guadagnato 8000 euro">
-
-<button onclick="assistente()">
-Analizza
-</button>
-
-<div id="ai" class="box"></div>
-
-</section>
-
-<!-- PREMIUM -->
-<div class="premium">
-
-🔵 PREMIUM
-
-<br><br>
-
-Analisi avanzata • Storico annuale • AI fiscale evoluta • Report completi
-
-</div>
-
+    </div>
 </div>
 
 <script>
+let currentStep = 1;
 
-function calcola(){
-
-let income = parseFloat(document.getElementById("income").value);
-let clients = parseInt(document.getElementById("clients").value) || 0;
-let activity = document.getElementById("activity").value;
-
-let result = document.getElementById("result");
-
-if(!income){
-result.innerHTML = "Inserisci un importo valido.";
-return;
+function showStep(step) {
+    document.querySelectorAll(".step").forEach(s => s.classList.remove("active"));
+    document.getElementById("step" + step)?.classList.add("active");
+    if (step === "result") {
+        document.getElementById("resultStep").classList.add("active");
+    }
+    currentStep = step;
 }
 
-let suggestedRate =
-income <= 5000 ? 0.10 :
-income <= 15000 ? 0.18 : 0.25;
-
-let reserve = income * suggestedRate;
-
-let risk = "";
-let reason = "";
-
-if(income <= 5000){
-risk = "🟢 Basso";
-reason = "Attività compatibile con occasionalità.";
-}
-else if(income <= 15000){
-risk = "🟠 Medio";
-reason = "Possibile continuità dell’attività.";
-}
-else{
-risk = "🔴 Alto";
-reason = "Attività strutturata.";
+function nextStep() {
+    showStep(currentStep + 1);
 }
 
-if(clients > 10){
-risk = "🔴 Alto";
-reason = "Numero elevato di clienti.";
+function prevStep() {
+    showStep(currentStep - 1);
 }
 
-result.innerHTML =
-"<b>Attività:</b> " + activity +
-"<br><b>Guadagni:</b> €" + income.toFixed(2) +
-"<br><b>Accantonamento:</b> €" + reserve.toFixed(2) +
-"<br><b>Rischio:</b> " + risk +
-"<br><b>Motivo:</b> " + reason;
+function calculate() {
 
-document.getElementById("incomeText").innerHTML =
-"Guadagni registrati: €" + income;
+    const income = parseFloat(document.getElementById("income").value || 0);
+    const continuity = document.getElementById("continuity").value;
+    const costs = document.getElementById("costs").value;
+    const goal = document.getElementById("goal").value;
+    const activity = document.getElementById("activity").value;
 
-let progress = Math.min((income / 5000) * 100, 100);
-document.getElementById("bar").style.width = progress + "%";
+    // --- SIMULAZIONE BASE ---
+
+    let occasionalNet = income * 0.78;
+    let flatTaxNet = income * 0.75;
+    let ordinaryNet = income * 0.60;
+
+    let recommendation = "";
+
+    // logica semplice ma efficace
+    if (income < 5000 && continuity === "occasionale") {
+        recommendation = "Prestazione occasionale può andare bene";
+    } else if (income < 30000) {
+        recommendation = "Partita IVA regime forfettario è la scelta migliore";
+    } else {
+        recommendation = "Valuta regime ordinario o struttura avanzata";
+    }
+
+    let resultText = `
+📊 ANALISI TAXCOPILOT
+
+Attività: ${activity}
+Reddito: €${income}
+Continuità: ${continuity}
+Costi: ${costs}
+Obiettivo: ${goal}
+
+---
+
+🥇 PRESTAZIONE OCCASIONALE
+Netto stimato: €${occasionalNet.toFixed(0)}
+
+🥈 REGIME FORFETTARIO
+Netto stimato: €${flatTaxNet.toFixed(0)}
+
+🥉 REGIME ORDINARIO
+Netto stimato: €${ordinaryNet.toFixed(0)}
+
+---
+
+🧠 RACCOMANDAZIONE:
+${recommendation}
+
+⚠️ Simulazione indicativa basata su modello semplificato fiscale italiano.
+    `;
+
+    document.getElementById("result").innerText = resultText;
+    showStep("result");
 }
 
-function assistente(){
-
-let text = document.getElementById("msg").value.toLowerCase();
-let out = document.getElementById("ai");
-
-let num = text.match(/\d+/g);
-
-if(!num){
-out.innerHTML = "Scrivi tipo: ho guadagnato 8000 euro";
-return;
+function restart() {
+    location.reload();
 }
-
-let income = parseInt(num[0]);
-
-let analysis = "";
-
-if(income <= 3000){
-analysis = "Attività molto occasionale.";
-}
-else if(income <= 5000){
-analysis = "Occasionale con rischio basso.";
-}
-else if(income <= 15000){
-analysis = "Valuta continuità dell’attività.";
-}
-else{
-analysis = "Probabile attività strutturata.";
-}
-
-out.innerHTML =
-"<b>Analisi:</b> " + analysis +
-"<br><b>Accantonamento:</b> €" + (income * 0.18).toFixed(2);
-}
-
-function generaReport(){
-
-let income = document.getElementById("income").value || 0;
-
-let content =
-`TAXCOPILOT REPORT
-
-Guadagni: €${income}
-
-Simulazione automatica.
-
-Non è consulenza fiscale.`;
-
-let blob = new Blob([content], {type:"text/plain;charset=utf-8"});
-
-let link = document.createElement("a");
-link.href = URL.createObjectURL(blob);
-link.download = "taxcopilot-report.txt";
-link.click();
-}
-
 </script>
 
 </body>
 </html>
-SRV
-10
-10 443 ms-it.securemail.pro.
-@.calcolotasselavorioccasionali.it
-3600
-
-A
-75.2.60.5
-@.calcolotasselavorioccasionali.it
-3600
-
-A
-99.83.190.102
-authsmtp.calcolotasselavorioccasionali.it
-900
-
-CNAME
-authsmtp.register.it.
-autoconfig.calcolotasselavorioccasionali.it
-900
-
-CNAME
-
-Nome	TTL	Tipo	Valore	
-ftp.calcolotasselavorioccasionali.it
-900
-
-CNAME
-calcolotasselavorioccasionali.it.
-pec.calcolotasselavorioccasionali.it
-900
-
-MX
-10
-mx.pec-email.com.
-pec.calcolotasselavorioccasionali.it
-900
-
-CnamE
-mail.register.it.
-www.calcolotasselavorioccasionali.it
-900
-
-CNAME
-calcolotasselavorioccasionali.it.
-tb-it.securemail.pro.
