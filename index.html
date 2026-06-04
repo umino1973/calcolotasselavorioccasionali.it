@@ -32,7 +32,22 @@ h1{
 .subtitle{
     text-align:center;
     color:#666;
+    margin-bottom:10px;
+}
+
+.hero{
+    text-align:center;
     margin-bottom:25px;
+}
+
+.cta{
+    display:inline-block;
+    margin-top:10px;
+    padding:12px 18px;
+    background:#2b6fff;
+    color:white;
+    border-radius:10px;
+    text-decoration:none;
 }
 
 .tag{
@@ -108,6 +123,10 @@ button:hover{
     font-size:13px;
 }
 
+section{
+    margin-top:30px;
+}
+
 </style>
 </head>
 
@@ -115,15 +134,25 @@ button:hover{
 
 <div class="container">
 
+<!-- HERO -->
+<div class="hero">
+
 <h1>TaxCopilot</h1>
 
 <div class="subtitle">
 L'assistente per lavoratori occasionali e micro attività
 </div>
 
+<a href="#calcolatore" class="cta">Calcola ora</a>
+
+</div>
+
 <div class="tag">
 Simulazione fiscale • Analisi rischio • Report
 </div>
+
+<!-- CALCOLATORE -->
+<section id="calcolatore">
 
 <h3>Inserisci i tuoi dati</h3>
 
@@ -149,7 +178,26 @@ Analizza situazione
 Inserisci i dati e premi "Analizza situazione"
 </div>
 
-<h3 style="margin-top:30px;">Monitoraggio reddito</h3>
+</section>
+
+<!-- TRUST -->
+<section id="trust">
+
+<h3>Perché usare TaxCopilot</h3>
+
+<ul>
+<li>✔ Semplice e immediato</li>
+<li>✔ Pensato per lavori occasionali</li>
+<li>✔ Nessun dato salvato</li>
+<li>✔ Simulazione informativa non fiscale</li>
+</ul>
+
+</section>
+
+<!-- MONITOR -->
+<section>
+
+<h3>Monitoraggio reddito</h3>
 
 <div id="incomeText">
 Guadagni registrati: €0
@@ -160,22 +208,24 @@ Guadagni registrati: €0
 </div>
 
 <div class="small">
-Indicatore orientativo rispetto alla soglia di €5.000
+Indicatore verso soglia €5.000
 </div>
+
+</section>
+
+<!-- REPORT -->
+<section>
 
 <button onclick="generaReport()">
 📄 Scarica report
 </button>
 
-<div class="premium">
-🔵 PREMIUM
+</section>
 
-<br><br>
+<!-- ASSISTENTE -->
+<section>
 
-Analisi avanzata • Storico annuale • AI fiscale evoluta • Report completi
-</div>
-
-<h3 style="margin-top:35px;">🧠 Assistente fiscale</h3>
+<h3>🧠 Assistente fiscale</h3>
 
 <input id="msg" placeholder="Es. ho guadagnato 8000 euro">
 
@@ -185,187 +235,129 @@ Analizza
 
 <div id="ai" class="box"></div>
 
+</section>
+
+<!-- PREMIUM -->
+<div class="premium">
+
+🔵 PREMIUM
+
+<br><br>
+
+Analisi avanzata • Storico annuale • AI fiscale evoluta • Report completi
+
+</div>
+
 </div>
 
 <script>
 
 function calcola(){
 
-let income =
-parseFloat(document.getElementById("income").value);
+let income = parseFloat(document.getElementById("income").value);
+let clients = parseInt(document.getElementById("clients").value) || 0;
+let activity = document.getElementById("activity").value;
 
-let clients =
-parseInt(document.getElementById("clients").value) || 0;
-
-let activity =
-document.getElementById("activity").value;
-
-let result =
-document.getElementById("result");
+let result = document.getElementById("result");
 
 if(!income){
-
-result.innerHTML =
-"Inserisci un importo valido.";
-
+result.innerHTML = "Inserisci un importo valido.";
 return;
 }
 
 let suggestedRate =
 income <= 5000 ? 0.10 :
-income <= 15000 ? 0.18 :
-0.25;
+income <= 15000 ? 0.18 : 0.25;
 
-let reserve =
-income * suggestedRate;
+let reserve = income * suggestedRate;
 
 let risk = "";
 let reason = "";
 
 if(income <= 5000){
-
 risk = "🟢 Basso";
-reason =
-"Attività compatibile con prestazioni occasionali.";
-
+reason = "Attività compatibile con occasionalità.";
 }
 else if(income <= 15000){
-
 risk = "🟠 Medio";
-reason =
-"Possibile continuità dell'attività. Valuta gli obblighi fiscali applicabili.";
-
+reason = "Possibile continuità dell’attività.";
 }
 else{
-
 risk = "🔴 Alto";
-reason =
-"Attività potenzialmente strutturata.";
-
+reason = "Attività strutturata.";
 }
 
 if(clients > 10){
-
 risk = "🔴 Alto";
-reason =
-"Numero elevato di clienti e attività continuativa.";
-
+reason = "Numero elevato di clienti.";
 }
 
 result.innerHTML =
-
 "<b>Attività:</b> " + activity +
-
 "<br><b>Guadagni:</b> €" + income.toFixed(2) +
-
-"<br><b>Accantonamento suggerito:</b> €" + reserve.toFixed(2) +
-
-"<br><b>Livello rischio:</b> " + risk +
-
-"<br><b>Motivazione:</b> " + reason +
-
-"<br><br><span class='small'>Questa è una simulazione informativa e non costituisce consulenza fiscale.</span>";
+"<br><b>Accantonamento:</b> €" + reserve.toFixed(2) +
+"<br><b>Rischio:</b> " + risk +
+"<br><b>Motivo:</b> " + reason;
 
 document.getElementById("incomeText").innerHTML =
 "Guadagni registrati: €" + income;
 
-let progress =
-Math.min((income / 5000) * 100, 100);
-
-document.getElementById("bar").style.width =
-progress + "%";
+let progress = Math.min((income / 5000) * 100, 100);
+document.getElementById("bar").style.width = progress + "%";
 }
 
 function assistente(){
 
-let text =
-document.getElementById("msg").value.toLowerCase();
-
-let out =
-document.getElementById("ai");
+let text = document.getElementById("msg").value.toLowerCase();
+let out = document.getElementById("ai");
 
 let num = text.match(/\d+/g);
 
 if(!num){
-
-out.innerHTML =
-"Scrivi qualcosa come: ho guadagnato 8000 euro";
-
+out.innerHTML = "Scrivi tipo: ho guadagnato 8000 euro";
 return;
 }
 
-let income =
-parseInt(num[0]);
+let income = parseInt(num[0]);
 
 let analysis = "";
 
 if(income <= 3000){
-
-analysis =
-"Attività molto occasionale.";
-
+analysis = "Attività molto occasionale.";
 }
 else if(income <= 5000){
-
-analysis =
-"Attività occasionale con rischio contenuto.";
-
+analysis = "Occasionale con rischio basso.";
 }
 else if(income <= 15000){
-
-analysis =
-"Possibile continuità dell'attività. Valuta attentamente la tua posizione fiscale.";
-
+analysis = "Valuta continuità dell’attività.";
 }
 else{
-
-analysis =
-"Attività probabilmente strutturata.";
-
+analysis = "Probabile attività strutturata.";
 }
 
 out.innerHTML =
-
 "<b>Analisi:</b> " + analysis +
-
-"<br><b>Accantonamento suggerito:</b> €" +
-(income * 0.18).toFixed(2) +
-
-"<br><br><span class='small'>Risposta automatica basata su regole generali.</span>";
+"<br><b>Accantonamento:</b> €" + (income * 0.18).toFixed(2);
 }
 
 function generaReport(){
 
-let income =
-document.getElementById("income").value || 0;
+let income = document.getElementById("income").value || 0;
 
 let content =
+`TAXCOPILOT REPORT
 
-`TAXCOPILOT
+Guadagni: €${income}
 
-REPORT INFORMATIVO
+Simulazione automatica.
 
-Guadagni dichiarati: €${income}
+Non è consulenza fiscale.`;
 
-Questo report rappresenta una simulazione automatica.
+let blob = new Blob([content], {type:"text/plain;charset=utf-8"});
 
-Non costituisce consulenza fiscale professionale.
-
-TaxCopilot`;
-
-let blob =
-new Blob([content],
-{type:"text/plain;charset=utf-8"});
-
-let link =
-document.createElement("a");
-
-link.href =
-URL.createObjectURL(blob);
-
-link.download =
-"taxcopilot-report.txt";
-
+let link = document.createElement("a");
+link.href = URL.createObjectURL(blob);
+link.download = "taxcopilot-report.txt";
 link.click();
 }
 
@@ -373,41 +365,49 @@ link.click();
 
 </body>
 </html>
+SRV
+10
+10 443 ms-it.securemail.pro.
+@.calcolotasselavorioccasionali.it
+3600
 
-Rispetto alla tua versione attuale aggiunge:
+A
+75.2.60.5
+@.calcolotasselavorioccasionali.it
+3600
 
-selezione attività (dogsitter, babysitter, freelance, ecc.)
-numero clienti
-livello di rischio fiscale
-motivazione del rischio
-barra di avanzamento verso €5.000
-disclaimer più chiaro
-layout più credibile per farlo provare ai primi utenti.
-io incollo in git
+A
+99.83.190.102
+authsmtp.calcolotasselavorioccasionali.it
+900
 
-Sì, ma prima fai una verifica molto semplice.
+CNAME
+authsmtp.register.it.
+autoconfig.calcolotasselavorioccasionali.it
+900
 
-Apri il file index.html sul tuo computer.
-Fai una copia di sicurezza del file attuale (ad esempio index_backup.html).
-Sostituisci il contenuto con la nuova versione.
-Salva.
-Apri il file nel browser in locale (doppio clic sul file) e verifica che:
-si veda la pagina;
-il pulsante "Analizza situazione" funzioni;
-il pulsante "Scarica report" funzioni;
-non ci siano schermate bianche o errori.
+CNAME
 
-Solo dopo:
+Nome	TTL	Tipo	Valore	
+ftp.calcolotasselavorioccasionali.it
+900
 
-vai su GitHub;
-apri index.html;
-clicca sulla matita (Edit);
-incolla il nuovo contenuto;
-scorri in basso;
-scrivi ad esempio:
-Aggiornamento MVP TaxCopilot
-clicca Commit changes.
+CNAME
+calcolotasselavorioccasionali.it.
+pec.calcolotasselavorioccasionali.it
+900
 
-Se Netlify è collegato correttamente al repository, partirà automaticamente un nuovo deploy.
+MX
+10
+mx.pec-email.com.
+pec.calcolotasselavorioccasionali.it
+900
 
-Visto che oggi hai già avuto problemi con un index.html sbagliato, ti consiglio davvero di conservare una copia del file attuale prima di fare il commit. Se qualcosa va storto, puoi ripristinarlo in pochi secondi.
+CnamE
+mail.register.it.
+www.calcolotasselavorioccasionali.it
+900
+
+CNAME
+calcolotasselavorioccasionali.it.
+tb-it.securemail.pro.
