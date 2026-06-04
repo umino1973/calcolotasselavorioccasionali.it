@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TaxCopilot Money Finder v3 Stable</title>
+<title>TaxCopilot Money Finder v3 FIX</title>
 
 <style>
 body {
@@ -61,12 +61,12 @@ button {
 <body>
 
 <div class="container">
-  <h1>TaxCopilot 💰 v3 Stable</h1>
-  <div class="subtitle">Incentivi + strategie + ottimizzazione reale</div>
+  <h1>TaxCopilot 💰 v3 FIX</h1>
+  <div class="subtitle">Analisi incentivi e strategie fiscali</div>
 
-  <textarea id="idea" placeholder="Descrivi la tua idea..."></textarea>
+  <textarea id="idea" placeholder="Scrivi la tua idea..."></textarea>
 
-  <button onclick="runAI()">Analizza opportunità</button>
+  <button onclick="runAI()">Analizza</button>
 
   <div class="card" id="output">Pronto...</div>
 </div>
@@ -79,6 +79,9 @@ async function runAI() {
 
   output.innerText = "Analisi in corso...";
 
+  const API_KEY = "sk-xxxxx";
+  // 🔴 IMPORTANTE: sostituisci questa stringa
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30000);
 
@@ -88,7 +91,7 @@ async function runAI() {
       signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
-        "Authorization": "Bearer YOUR_API_KEY"
+        "Authorization": "Bearer " + API_KEY
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
@@ -98,26 +101,15 @@ async function runAI() {
             content: `
 Sei TaxCopilot MONEY FINDER v3.
 
-Analizzi idee e trovi opportunità economiche reali in Italia.
+Trova opportunità economiche reali in Italia.
 
 REGOLE:
-- ottimizza opportunità e incentivi
-- dividi: facili / medi / difficili
+- dividi incentivi in facili / medi / difficili
 - assegna probabilità 0–100
 - proponi strategia concreta
-- sii aggressivo ma realistico
+- massimizza opportunità legali
 
-OUTPUT JSON:
-{
-  "attivita": "",
-  "opportunita": {
-    "facili": [],
-    "medie": [],
-    "difficili": []
-  },
-  "strategia": "",
-  "roadmap": []
-}
+OUTPUT JSON.
             `
           },
           {
@@ -137,18 +129,14 @@ OUTPUT JSON:
     const data = await response.json();
 
     output.innerText =
-      data.choices?.[0]?.message?.content || "Nessun risultato ricevuto";
+      data.choices?.[0]?.message?.content || "Nessun risultato";
 
   } catch (err) {
     clearTimeout(timeout);
 
     output.innerHTML =
-      "<div class='error'>Errore richiesta o timeout.</div>\n\n" +
-      "Possibili cause:\n" +
-      "- API key errata\n" +
-      "- billing non attivo OpenAI\n" +
-      "- blocco browser / rete\n\n" +
-      "Errore tecnico: " + err.message;
+      "<div class='error'>Errore API o connessione</div>\n\n" +
+      "Dettaglio: " + err.message;
   }
 }
 
