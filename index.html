@@ -1,73 +1,69 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>TaxCopilot Wizard</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaxCopilot Money Finder v3</title>
 
 <style>
 body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    background: #0f172a;
-    color: #e2e8f0;
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #070b16;
+  color: white;
 }
 
 .container {
-    max-width: 700px;
-    margin: auto;
-    padding: 40px 20px;
+  max-width: 900px;
+  margin: auto;
+  padding: 40px;
 }
 
 h1 {
-    text-align: center;
-    margin-bottom: 20px;
+  font-size: 30px;
 }
 
-.card {
-    background: #1e293b;
-    padding: 25px;
-    border-radius: 12px;
+.subtitle {
+  color: #94a3b8;
+  margin-bottom: 20px;
+}
+
+textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  margin-top: 10px;
 }
 
 button {
-    padding: 10px 15px;
-    margin: 10px 5px 0 0;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    background: #38bdf8;
-    color: black;
-    font-weight: bold;
+  margin-top: 15px;
+  padding: 12px 18px;
+  background: #22c55e;
+  border: none;
+  color: white;
+  font-weight: bold;
+  border-radius: 10px;
+  cursor: pointer;
 }
 
-button.secondary {
-    background: #334155;
-    color: white;
+.card {
+  margin-top: 20px;
+  padding: 20px;
+  background: #111a2e;
+  border-radius: 12px;
+  white-space: pre-wrap;
+  border: 1px solid #1f2a44;
 }
 
-input, select {
-    width: 100%;
-    padding: 10px;
-    margin-top: 10px;
-    border-radius: 8px;
-    border: none;
-}
-
-.step {
-    display: none;
-}
-
-.step.active {
-    display: block;
-}
-
-.result {
-    white-space: pre-wrap;
-    background: #0b1220;
-    padding: 15px;
-    border-radius: 10px;
-    margin-top: 20px;
+.badge {
+  display: inline-block;
+  padding: 4px 8px;
+  background: #1f2937;
+  border-radius: 6px;
+  font-size: 12px;
+  margin-bottom: 10px;
 }
 </style>
 </head>
@@ -75,159 +71,96 @@ input, select {
 <body>
 
 <div class="container">
-    <h1>TaxCopilot Wizard</h1>
+  <h1>TaxCopilot 💰 Money Finder v3</h1>
+  <div class="subtitle">Trova incentivi, opportunità e strategie reali di accesso ai fondi</div>
 
-    <div class="card">
+  <textarea id="idea" placeholder="Descrivi la tua idea (es: dogsitter, freelance, microimpresa...)"></textarea>
 
-        <!-- STEP 1 -->
-        <div class="step active" id="step1">
-            <h2>Che tipo di attività fai?</h2>
-            <select id="activity">
-                <option value="dogsitter">Dogsitter / pet care</option>
-                <option value="freelance">Freelance digitale</option>
-                <option value="occasionali">Lavori occasionali</option>
-                <option value="altro">Altro</option>
-            </select>
-            <button onclick="nextStep()">Avanti</button>
-        </div>
+  <button onclick="runAI()">Analizza opportunità</button>
 
-        <!-- STEP 2 -->
-        <div class="step" id="step2">
-            <h2>Guadagno annuo stimato (€)</h2>
-            <input type="number" id="income" placeholder="es. 12000"/>
-            <button onclick="prevStep()" class="secondary">Indietro</button>
-            <button onclick="nextStep()">Avanti</button>
-        </div>
-
-        <!-- STEP 3 -->
-        <div class="step" id="step3">
-            <h2>Quanto è stabile il lavoro?</h2>
-            <select id="continuity">
-                <option value="occasionale">Occasionale</option>
-                <option value="semi">Semi-regolare</option>
-                <option value="regolare">Regolare</option>
-                <option value="full">Full-time</option>
-            </select>
-            <button onclick="prevStep()" class="secondary">Indietro</button>
-            <button onclick="nextStep()">Avanti</button>
-        </div>
-
-        <!-- STEP 4 -->
-        <div class="step" id="step4">
-            <h2>Hai costi?</h2>
-            <select id="costs">
-                <option value="none">Nessuno</option>
-                <option value="low">Bassi</option>
-                <option value="medium">Medi</option>
-                <option value="high">Alti</option>
-            </select>
-            <button onclick="prevStep()" class="secondary">Indietro</button>
-            <button onclick="nextStep()">Avanti</button>
-        </div>
-
-        <!-- STEP 5 -->
-        <div class="step" id="step5">
-            <h2>Obiettivo</h2>
-            <select id="goal">
-                <option value="extra">Guadagno extra</option>
-                <option value="stable">Reddito stabile</option>
-                <option value="main">Lavoro principale</option>
-                <option value="scale">Crescita/impresa</option>
-            </select>
-
-            <button onclick="prevStep()" class="secondary">Indietro</button>
-            <button onclick="calculate()">Analizza</button>
-        </div>
-
-        <!-- RESULT -->
-        <div class="step" id="resultStep">
-            <h2>Risultato</h2>
-            <div class="result" id="result"></div>
-            <button onclick="restart()">Ricomincia</button>
-        </div>
-
-    </div>
+  <div class="card" id="output">Risultati qui...</div>
 </div>
 
 <script>
-let currentStep = 1;
+async function runAI() {
+  const idea = document.getElementById("idea").value;
 
-function showStep(step) {
-    document.querySelectorAll(".step").forEach(s => s.classList.remove("active"));
-    document.getElementById("step" + step)?.classList.add("active");
-    if (step === "result") {
-        document.getElementById("resultStep").classList.add("active");
-    }
-    currentStep = step;
+  document.getElementById("output").innerText = "Analisi incentivi in corso...";
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer YOUR_API_KEY"
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `
+Sei TaxCopilot MONEY FINDER v3.
+
+OBIETTIVO:
+Massimizzare opportunità economiche legali in Italia tramite incentivi, bandi e strategie fiscali.
+
+REGOLE:
+- NON elencare incentivi casuali
+- Valuta compatibilità reale (0–100)
+- Dividi in: FACILI / MEDI / DIFFICILI
+- Ogni incentivo deve avere probabilità di accesso
+- Proponi SEMPRE strategia per aumentare possibilità
+- Se non perfetto → combina opportunità
+
+OUTPUT SOLO JSON:
+
+{
+  "profilo": {
+    "attivita": "",
+    "stadio": "idea | micro | impresa",
+    "potenziale": "basso | medio | alto"
+  },
+  "opportunita": {
+    "facili": [
+      {
+        "nome": "",
+        "valore": "",
+        "compatibilita": 0,
+        "probabilita_accesso": 0,
+        "perche": ""
+      }
+    ],
+    "medie": [],
+    "difficili": []
+  },
+  "strategia": {
+    "percorso_ottimale": "",
+    "step_accesso_fondi": [
+      "",
+      "",
+      ""
+    ],
+    "ottimizzazione": ""
+  },
+  "posizionamento": {
+    "come_presentarsi": "",
+    "errore_da_evitate": ""
+  }
 }
+          `
+        },
+        {
+          role: "user",
+          content: idea
+        }
+      ]
+    })
+  });
 
-function nextStep() {
-    showStep(currentStep + 1);
-}
+  const data = await response.json();
 
-function prevStep() {
-    showStep(currentStep - 1);
-}
-
-function calculate() {
-
-    const income = parseFloat(document.getElementById("income").value || 0);
-    const continuity = document.getElementById("continuity").value;
-    const costs = document.getElementById("costs").value;
-    const goal = document.getElementById("goal").value;
-    const activity = document.getElementById("activity").value;
-
-    // --- SIMULAZIONE BASE ---
-
-    let occasionalNet = income * 0.78;
-    let flatTaxNet = income * 0.75;
-    let ordinaryNet = income * 0.60;
-
-    let recommendation = "";
-
-    // logica semplice ma efficace
-    if (income < 5000 && continuity === "occasionale") {
-        recommendation = "Prestazione occasionale può andare bene";
-    } else if (income < 30000) {
-        recommendation = "Partita IVA regime forfettario è la scelta migliore";
-    } else {
-        recommendation = "Valuta regime ordinario o struttura avanzata";
-    }
-
-    let resultText = `
-📊 ANALISI TAXCOPILOT
-
-Attività: ${activity}
-Reddito: €${income}
-Continuità: ${continuity}
-Costi: ${costs}
-Obiettivo: ${goal}
-
----
-
-🥇 PRESTAZIONE OCCASIONALE
-Netto stimato: €${occasionalNet.toFixed(0)}
-
-🥈 REGIME FORFETTARIO
-Netto stimato: €${flatTaxNet.toFixed(0)}
-
-🥉 REGIME ORDINARIO
-Netto stimato: €${ordinaryNet.toFixed(0)}
-
----
-
-🧠 RACCOMANDAZIONE:
-${recommendation}
-
-⚠️ Simulazione indicativa basata su modello semplificato fiscale italiano.
-    `;
-
-    document.getElementById("result").innerText = resultText;
-    showStep("result");
-}
-
-function restart() {
-    location.reload();
+  document.getElementById("output").innerText =
+    data.choices[0].message.content;
 }
 </script>
 
