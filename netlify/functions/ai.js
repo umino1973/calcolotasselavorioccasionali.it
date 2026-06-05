@@ -1,4 +1,4 @@
-export const handler = async (event) => {
+exports.handler = async (event) => {
   try {
 
     const body = event.body ? JSON.parse(event.body) : {};
@@ -29,6 +29,9 @@ export const handler = async (event) => {
 
     return {
       statusCode: 200,
+      headers: {
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify({
         result: data.choices?.[0]?.message?.content || "Nessuna risposta"
       })
