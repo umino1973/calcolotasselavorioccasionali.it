@@ -23,6 +23,17 @@ exports.handler = async (event) => {
     // Chiamata OpenAI
 const apiKey = process.env.OPENAI_API_KEY;
 
+console.log("KEY START:", process.env.OPENAI_API_KEY?.slice(0, 8));
+
+if (!apiKey) {
+  return {
+    statusCode: 500,
+    body: JSON.stringify({
+      error: "Missing OPENAI_API_KEY in environment variables"
+    })
+  };
+}
+
 if (!apiKey) {
   return {
     statusCode: 500,
