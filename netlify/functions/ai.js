@@ -1,31 +1,29 @@
-exports.handler = async (event) => {
+export const handler = async (event) => {
   try {
 
-    const { idea } = JSON.parse(event.body);
+    const body = event.body ? JSON.parse(event.body) : {};
+    const idea = body.idea || "test";
 
-    const response = await fetch(
-      "https://api.openai.com/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "system",
-              content: "Sei TaxCopilot. Rispondi in italiano in modo chiaro e strutturato."
-            },
-            {
-              role: "user",
-              content: idea
-            }
-          ]
-        })
-      }
-    );
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "Sei TaxCopilot. Rispondi in italiano in modo strutturato."
+          },
+          {
+            role: "user",
+            content: idea
+          }
+        ]
+      })
+    });
 
     const data = await response.json();
 
