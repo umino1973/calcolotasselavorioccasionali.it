@@ -23,15 +23,18 @@ const data = await response.json();
 
 // 🔴 DEBUG IMPORTANTE
 if (!response.ok) {
-  return {
-    statusCode: 500,
-    body: JSON.stringify({
-      error: data,
-      debug: true
-    })
-  };
-}
-
+ return {
+  statusCode: 200,
+  headers: {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS"
+  },
+  body: JSON.stringify({
+    result: data.choices?.[0]?.message?.content || "Nessuna risposta"
+  })
+};
 return {
   statusCode: 200,
   body: JSON.stringify({
