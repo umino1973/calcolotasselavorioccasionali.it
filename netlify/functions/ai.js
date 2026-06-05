@@ -46,14 +46,11 @@ exports.handler = async (event) => {
 
     // Debug errore OpenAI vero (fondamentale)
     if (!response.ok) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({
-          error: "OpenAI error",
-          details: data
-        })
-      };
-    }
+  return {
+    statusCode: 500,
+    body: JSON.stringify(data)
+  };
+}
 
     const result = data?.choices?.[0]?.message?.content;
 
