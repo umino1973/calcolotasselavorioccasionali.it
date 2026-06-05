@@ -1,32 +1,26 @@
 exports.handler = async (event) => {
-
   try {
 
-    // DEBUG: method check
-    if (event.httpMethod === "OPTIONS") {
+    // Consenti solo POST
+    if (event.httpMethod !== "POST") {
       return {
-        statusCode: 200,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Headers": "Content-Type",
-          "Access-Control-Allow-Methods": "POST, OPTIONS"
-        },
-        body: ""
+        statusCode: 405,
+        body: JSON.stringify({ error: "Method Not Allowed" })
       };
     }
 
+    // Parse body in sicurezza
     const body = event.body ? JSON.parse(event.body) : {};
-    const idea = body.idea || "test";
+    const idea = body.idea || "";
 
-    if (!process.env.OPENAI_API_KEY) {
+    if (!idea) {
       return {
-        statusCode: 500,
-        body: JSON.stringify({
-          error: "MISSING OPENAI_API_KEY"
-        })
+        statusCode: 400,
+        body: JSON.stringify({ error: "Missing idea" })
       };
     }
 
+    // Chiamata OpenAI
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -38,7 +32,7 @@ exports.handler = async (event) => {
         messages: [
           {
             role: "system",
-            content: "Sei TaxCopilot. Rispondi in italiano in modo strutturato."
+            content: "Sei TaxCopilot. Analizzi idee e trovi opportunità, incentivi e suggerimenti fiscali in italiano in modo chiaro e strutturato."
           },
           {
             role: "user",
@@ -50,6 +44,29 @@ exports.handler = async (event) => {
 
     const data = await response.json();
 
+    // Debug errore OpenAI vero (fondamentale)
+    if (!response.ok) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          error: "OpenAI error",
+          details: data
+        })
+      };
+    }
+
+    const result = data?.choices?.[0]?.message?.content;
+
+    if (!result) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          error: "Empty response from OpenAI",
+          raw: data
+        })
+      };
+    }
+
     return {
       statusCode: 200,
       headers: {
@@ -57,13 +74,11 @@ exports.handler = async (event) => {
         "Access-Control-Allow-Origin": "*"
       },
       body: JSON.stringify({
-        result: data?.choices?.[0]?.message?.content || null,
-        debug: data
+        result
       })
     };
 
   } catch (err) {
-
     return {
       statusCode: 500,
       headers: {
@@ -71,10 +86,8 @@ exports.handler = async (event) => {
         "Access-Control-Allow-Origin": "*"
       },
       body: JSON.stringify({
-        error: err.message,
-        stack: err.stack
+        error: err.message
       })
     };
-
   }
 };
