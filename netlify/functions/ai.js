@@ -21,26 +21,37 @@ exports.handler = async (event) => {
     }
 
     // Chiamata OpenAI
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+const apiKey = process.env.OPENAI_API_KEY;
+
+if (!apiKey) {
+  return {
+    statusCode: 500,
+    body: JSON.stringify({
+      error: "Missing OPENAI_API_KEY in environment variables"
+    })
+  };
+}
+
+const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${apiKey}`
+  },
+  body: JSON.stringify({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: "Sei TaxCopilot. Analizzi idee e trovi opportunità fiscali in italiano."
       },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: "Sei TaxCopilot. Analizzi idee e trovi opportunità, incentivi e suggerimenti fiscali in italiano in modo chiaro e strutturato."
-          },
-          {
-            role: "user",
-            content: idea
-          }
-        ]
-      })
-    });
+      {
+        role: "user",
+        content: idea
+      }
+    ]
+  })
+});
 
     const data = await response.json();
 
