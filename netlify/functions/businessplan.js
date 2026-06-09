@@ -15,7 +15,7 @@ exports.handler = async (event) => {
     const { idea, sector, stage, region, capital } = body;
 
     // =========================
-    // 📦 DATABASE BANDI (INLINE - NO IMPORT)
+    // 📦 DATABASE BANDI
     // =========================
 
     const BANDI_DB = [
@@ -29,7 +29,7 @@ exports.handler = async (event) => {
         max_amount: 1500000
       },
       {
-        name: "Horizon Europe - EIC Accelerator",
+        name: "Horizon Europe",
         entity: "European Commission",
         link: "https://eic.ec.europa.eu/eic-funding-opportunities/eic-accelerator_en",
         sectors: ["ai", "deeptech", "innovation"],
@@ -51,7 +51,7 @@ exports.handler = async (event) => {
     const text = `${idea} ${sector}`.toLowerCase();
 
     // =========================
-    // 🔎 MATCHING ENGINE
+    // 🔎 MATCH ENGINE
     // =========================
 
     let matches = [];
@@ -61,11 +61,8 @@ exports.handler = async (event) => {
       let score = 0;
 
       if (b.sectors.some(s => text.includes(s))) score += 40;
-
       if (b.stage === stage) score += 30;
-
       if (b.region === region.toLowerCase() || b.region === "italy") score += 20;
-
       if (text.includes("ai") || text.includes("intelligenza")) score += 10;
 
       if (score > 20) {
@@ -73,7 +70,8 @@ exports.handler = async (event) => {
           ...b,
           compatibility_score: score,
           success_probability:
-            score > 70 ? "high" : score > 40 ? "medium" : "low"
+            score > 70 ? "high" : score > 40 ? "medium" : "low",
+          reason: "Match basato su settore/stadio/regione"
         });
       }
     }
@@ -85,7 +83,7 @@ exports.handler = async (event) => {
     console.log("MATCH FOUND:", top.length);
 
     // =========================
-    // 💰 FUNDING ESTIMATE
+    // 💰 STIMA FINANZIAMENTI
     // =========================
 
     let max = top.length > 0
@@ -97,56 +95,15 @@ exports.handler = async (event) => {
       stage === "mvp" ? 0.6 :
       1;
 
-    let conservative = Math.round(max * 0.1 * multiplier);
-    let realistic = Math.round(max * 0.25 * multiplier);
-    let optimistic = Math.round(max * 0.5 * multiplier);
+    // conversion safe
+    const cap = Number(capital || 0);
 
-    const fallback = {
-      bootstrap: capital * 2,
-      microcredit: capital * 3,
-      bank_loans: capital * 5
-    };
+    const conservative = Math.round(max * 0.1 * multiplier);
+    const realistic = Math.round(max * 0.25 * multiplier);
+    const optimistic = Math.round(max * 0.5 * multiplier);
 
     // =========================
-    // 🤖 AI SUMMARY
-    // =========================
-
-    let summary = "";
-
-    try {
-      const apiKey = process.env.OPENAI_API_KEY;
-
-      const ai = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "system",
-              content: "Sei un incubatore startup pragmatico."
-            },
-            {
-              role: "user",
-              content: `Riassumi questa idea in modo chiaro: ${idea}`
-            }
-          ]
-        })
-      });
-
-      const data = await ai.json();
-      summary = data?.choices?.[0]?.message?.content || "";
-
-    } catch (e) {
-      console.log("AI ERROR:", e.message);
-      summary = "Analisi AI non disponibile";
-    }
-
-    // =========================
-    // 🚀 RESPONSE
+    // 🚀 RESPONSE SICURA
     // =========================
 
     return {
@@ -156,23 +113,23 @@ exports.handler = async (event) => {
         "Access-Control-Allow-Origin": "*"
       },
       body: JSON.stringify({
-        business_summary: summary,
+        business_summary: `Startup nel settore ${sector} con focus su AI e servizi.`,
         funding_opportunities: top,
         funding_estimate: {
           conservative,
           realistic,
           optimistic
         },
-        fallback_financing: fallback,
         overall_score: top.length ? top[0].compatibility_score : 10,
         next_action: top.length
           ? `Candidati a: ${top[0].name}`
-          : "Migliora descrizione idea e riprova"
+          : "Migliora descrizione idea"
       })
     };
 
   } catch (err) {
-    console.log("FUNCTION ERROR:", err);
+
+    console.log("ERROR:", err);
 
     return {
       statusCode: 500,
