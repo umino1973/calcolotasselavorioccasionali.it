@@ -1,7 +1,7 @@
 exports.handler = async (event) => {
   try {
 
-    console.log("FUNCTION STARTED");
+    console.log("V8 INCUBATOR STARTED");
 
     if (event.httpMethod !== "POST") {
       return {
@@ -10,12 +10,11 @@ exports.handler = async (event) => {
       };
     }
 
-    const body = JSON.parse(event.body || "{}");
-
-    const { idea, sector, stage, region, capital } = body;
+    const { idea, sector, stage, region, capital } =
+      JSON.parse(event.body || "{}");
 
     // =========================
-    // 📦 DATABASE BANDI
+    // 📦 BANDI CON REQUISITI REALI
     // =========================
 
     const BANDI_DB = [
@@ -24,86 +23,117 @@ exports.handler = async (event) => {
         entity: "Invitalia",
         link: "https://www.invitalia.it/cosa-facciamo/creiamo-nuove-aziende/smartstart-italia",
         sectors: ["ai", "tech", "digital", "servizi"],
-        stage: "startup",
-        region: "italy",
-        max_amount: 1500000
+        stage_allowed: ["idea", "mvp", "startup"],
+        region_allowed: ["italy"],
+        min_capital: 0,
+        max_capital: 1500000,
+        coverage: 0.9,
+        rules: "Startup innovativa registrata o in costituzione"
       },
       {
-        name: "Horizon Europe",
+        name: "Horizon Europe - EIC Accelerator",
         entity: "European Commission",
-        link: "https://eic.ec.europa.eu/eic-funding-opportunities/eic-accelerator_en",
+        link: "https://eic.ec.europa.eu",
         sectors: ["ai", "deeptech", "innovation"],
-        stage: "startup",
-        region: "eu",
-        max_amount: 2500000
+        stage_allowed: ["startup"],
+        region_allowed: ["eu"],
+        min_capital: 0,
+        max_capital: 2500000,
+        coverage: 0.7,
+        rules: "Startup scalabile deep tech con alto potenziale innovativo"
       },
       {
         name: "Fondo Lombardia Start",
         entity: "Regione Lombardia",
         link: "https://www.bandi.regione.lombardia.it",
         sectors: ["servizi", "innovazione"],
-        stage: "idea",
-        region: "lombardia",
-        max_amount: 80000
+        stage_allowed: ["idea", "mvp"],
+        region_allowed: ["lombardia"],
+        min_capital: 5000,
+        max_capital: 100000,
+        coverage: 0.5,
+        rules: "Impresa con sede in Lombardia"
       }
     ];
 
     const text = `${idea} ${sector}`.toLowerCase();
+    const cap = Number(capital || 0);
 
     // =========================
-    // 🔎 MATCH ENGINE
+    // 🎯 MATCHING REALE (ELEGIBILITY ENGINE)
     // =========================
 
-    let matches = [];
+    let results = [];
 
     for (const b of BANDI_DB) {
 
-      let score = 0;
+      let eligible = true;
+      let reasons = [];
 
-      if (b.sectors.some(s => text.includes(s))) score += 40;
-      if (b.stage === stage) score += 30;
-      if (b.region === region.toLowerCase() || b.region === "italy") score += 20;
-      if (text.includes("ai") || text.includes("intelligenza")) score += 10;
-
-      if (score > 20) {
-        matches.push({
-          ...b,
-          compatibility_score: score,
-          success_probability:
-            score > 70 ? "high" : score > 40 ? "medium" : "low",
-          reason: "Match basato su settore/stadio/regione"
-        });
+      // settore
+      const sectorMatch = b.sectors.some(s => text.includes(s));
+      if (!sectorMatch) {
+        eligible = false;
+        reasons.push("settore non coerente");
       }
+
+      // stage
+      if (!b.stage_allowed.includes(stage)) {
+        eligible = false;
+        reasons.push("fase aziendale non idonea");
+      }
+
+      // regione
+      if (!b.region_allowed.includes(region.toLowerCase())) {
+        eligible = false;
+        reasons.push("area geografica non ammessa");
+      }
+
+      // capitale
+      if (cap < b.min_capital || cap > b.max_capital) {
+        eligible = false;
+        reasons.push("capitale non compatibile");
+      }
+
+      // score realistico
+      let score = 0;
+      if (sectorMatch) score += 40;
+      if (b.stage_allowed.includes(stage)) score += 30;
+      if (b.region_allowed.includes(region.toLowerCase())) score += 20;
+      if (cap >= b.min_capital && cap <= b.max_capital) score += 10;
+
+      results.push({
+        name: b.name,
+        entity: b.entity,
+        link: b.link,
+        eligible,
+        compatibility_score: score,
+        probability: eligible ? "medium-high" : "low",
+        reason: eligible ? "Sei idoneo al bando" : reasons.join(", "),
+        coverage: b.coverage
+      });
     }
 
-    matches.sort((a, b) => b.compatibility_score - a.compatibility_score);
+    const eligibleOnly = results.filter(r => r.eligible);
 
-    const top = matches.slice(0, 5);
+    eligibleOnly.sort((a, b) => b.compatibility_score - a.compatibility_score);
 
-    console.log("MATCH FOUND:", top.length);
+    const top = eligibleOnly.slice(0, 5);
 
     // =========================
-    // 💰 STIMA FINANZIAMENTI
+    // 💰 STIMA REALISTICA
     // =========================
 
-    let max = top.length > 0
-      ? Math.max(...top.map(m => m.max_amount))
+    const maxFunding = top.length
+      ? Math.max(...top.map(b => b.coverage * 1000000))
       : 30000;
 
-    let multiplier =
-      stage === "idea" ? 0.3 :
-      stage === "mvp" ? 0.6 :
-      1;
-
-    // conversion safe
-    const cap = Number(capital || 0);
-
-    const conservative = Math.round(max * 0.1 * multiplier);
-    const realistic = Math.round(max * 0.25 * multiplier);
-    const optimistic = Math.round(max * 0.5 * multiplier);
+    const conservative = Math.round(maxFunding * 0.2);
+    const realistic = Math.round(maxFunding * 0.4);
+    const optimistic = Math.round(maxFunding * 0.7);
 
     // =========================
-    // 🚀 RESPONSE SICURA
+    // 🚀 OUTPUT
     // =========================
 
     return {
@@ -113,29 +143,26 @@ exports.handler = async (event) => {
         "Access-Control-Allow-Origin": "*"
       },
       body: JSON.stringify({
-        business_summary: `Startup nel settore ${sector} con focus su AI e servizi.`,
+        business_summary: `Analisi incubatore V8 per settore ${sector}`,
         funding_opportunities: top,
         funding_estimate: {
           conservative,
           realistic,
           optimistic
         },
-        overall_score: top.length ? top[0].compatibility_score : 10,
+        overall_score: top.length ? top[0].compatibility_score : 15,
         next_action: top.length
-          ? `Candidati a: ${top[0].name}`
-          : "Migliora descrizione idea"
+          ? `Sei idoneo: candidati a ${top[0].name}`
+          : "Nessun bando compatibile: raffina idea o cambia regione"
       })
     };
 
   } catch (err) {
-
-    console.log("ERROR:", err);
+    console.log("V8 ERROR:", err);
 
     return {
       statusCode: 500,
-      body: JSON.stringify({
-        error: err.message
-      })
+      body: JSON.stringify({ error: err.message })
     };
   }
 };
