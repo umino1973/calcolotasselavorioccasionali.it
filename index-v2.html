@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaxCopilot | Business Plan Generator</title>
+
+<style>
+body{
+    font-family: Arial, sans-serif;
+    max-width: 900px;
+    margin: auto;
+    padding: 20px;
+    background: #f7f7f7;
+}
+
+h1{
+    text-align: center;
+}
+
+.card{
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+input, textarea, select{
+    width: 100%;
+    padding: 12px;
+    margin-top: 8px;
+    margin-bottom: 16px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    font-size: 14px;
+}
+
+button{
+    width: 100%;
+    padding: 14px;
+    background: black;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+button:hover{
+    opacity: 0.9;
+}
+
+#result{
+    margin-top: 20px;
+    white-space: pre-wrap;
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>TaxCopilot V2 – Business Plan Generator</h1>
+
+<div class="card">
+
+<input id="projectName" placeholder="Nome progetto">
+
+<textarea id="idea" rows="6" placeholder="Descrivi la tua idea imprenditoriale"></textarea>
+
+<select id="sector">
+<option>AI</option>
+<option>Marketplace</option>
+<option>Welfare</option>
+<option>Servizi</option>
+<option>E-commerce</option>
+<option>Altro</option>
+</select>
+
+<select id="stage">
+<option>Idea</option>
+<option>MVP</option>
+<option>Startup avviata</option>
+</select>
+
+<select id="budget">
+<option value="<25k">Meno di 25.000 €</option>
+<option value="25-100k">25.000 - 100.000 €</option>
+<option value="100-500k">100.000 - 500.000 €</option>
+<option value=">500k">Più di 500.000 €</option>
+</select>
+
+<input id="region" placeholder="Regione (es. Lombardia)">
+
+<button onclick="generate()">Genera Business Plan</button>
+
+</div>
+
+<div id="result"></div>
+
+<script src="app-v2.js"></script>
+
+</body>
+</html>
