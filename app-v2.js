@@ -1,10 +1,9 @@
-
 async function generateFunding() {
 
   const output = document.getElementById("output");
 
   output.innerHTML = `
-    <div class="card">⏳ Analisi V10 in corso...</div>
+    <div class="card">⏳ Analisi in corso...</div>
   `;
 
   const idea = document.getElementById("idea").value;
@@ -17,7 +16,9 @@ async function generateFunding() {
 
     const res = await fetch("/.netlify/functions/businessplan", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify({
         idea,
         sector,
@@ -27,7 +28,20 @@ async function generateFunding() {
       })
     });
 
-    const data = await res.json();
+    const text = await res.text();
+    console.log("RAW RESPONSE:", text);
+
+    let data;
+
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      throw new Error("Risposta server non valida");
+    }
+
+    if (!res.ok) {
+      throw new Error(data.error || "Errore server");
+    }
 
     render(data);
 
@@ -41,7 +55,7 @@ async function generateFunding() {
 
 
 // =========================
-// 🎨 V10 RENDER SAFE
+// 🎨 RENDER STABILE
 // =========================
 
 function render(data) {
@@ -52,29 +66,31 @@ function render(data) {
   // 📊 SUMMARY
   // =====================
   html += `<h2>📊 Business Summary</h2>`;
-  html += `<div class="card">${data.business_summary}</div>`;
+  html += `<div class="card">${data.business_summary || "Analisi in corso..."}</div>`;
 
   // =====================
   // 🟢 ELIGIBLE
   // =====================
   html += `<h2>🟢 Bandi Idonei</h2>`;
 
-  (data.eligible || []).forEach(b => {
-    html += `
-      <div class="card">
-        <h3>${b.name}</h3>
-        <p><b>${b.entity}</b></p>
-        <p>Score: ${b.score}/100</p>
-        <p>Probabilità: ${b.probability}</p>
+  if (data.eligible && data.eligible.length > 0) {
 
-        <p><b>Upgrade:</b> ${(b.upgrade_path || []).join(", ")}</p>
+    data.eligible.forEach(b => {
+      html += `
+        <div class="card">
+          <h3>${b.name}</h3>
+          <p><b>${b.entity}</b></p>
+          <p>Score: ${b.score}/100</p>
+          <p>Probabilità: ${b.probability}</p>
 
-        <a href="${b.link}" target="_blank">Apri bando</a>
-      </div>
-    `;
-  });
+          <p><b>Upgrade:</b> ${(b.upgrade_path || []).join(", ")}</p>
 
-  if (!data.eligible || data.eligible.length === 0) {
+          <a href="${b.link}" target="_blank">Apri bando</a>
+        </div>
+      `;
+    });
+
+  } else {
     html += `<div class="card">Nessun bando pienamente idoneo</div>`;
   }
 
@@ -83,20 +99,21 @@ function render(data) {
   // =====================
   html += `<h2>🟡 Bandi Parziali</h2>`;
 
-  (data.partial || []).forEach(b => {
-    html += `
-      <div class="card">
-        <h3>${b.name}</h3>
-        <p>Score: ${b.score}/100</p>
+  if (data.partial && data.partial.length > 0) {
 
-        <p><b>Mancanze:</b> ${(b.missing || []).join(", ")}</p>
+    data.partial.forEach(b => {
+      html += `
+        <div class="card">
+          <h3>${b.name}</h3>
+          <p>Score: ${b.score}/100</p>
 
-        <p><b>Upgrade:</b> ${(b.upgrade_path || []).join(", ")}</p>
-      </div>
-    `;
-  });
+          <p><b>Mancanze:</b> ${(b.missing || []).join(", ")}</p>
+          <p><b>Upgrade:</b> ${(b.upgrade_path || []).join(", ")}</p>
+        </div>
+      `;
+    });
 
-  if (!data.partial || data.partial.length === 0) {
+  } else {
     html += `<div class="card">Nessun bando parzialmente compatibile</div>`;
   }
 
@@ -105,18 +122,20 @@ function render(data) {
   // =====================
   html += `<h2>🔴 Esclusi</h2>`;
 
-  (data.excluded || []).forEach(b => {
-    html += `
-      <div class="card">
-        <h3>${b.name}</h3>
-        <p>Mancano requisiti per accesso</p>
+  if (data.excluded && data.excluded.length > 0) {
 
-        <p><b>Mancanze:</b> ${(b.missing || []).join(", ")}</p>
-      </div>
-    `;
-  });
+    data.excluded.forEach(b => {
+      html += `
+        <div class="card">
+          <h3>${b.name}</h3>
+          <p>Mancano requisiti per accesso</p>
 
-  if (!data.excluded || data.excluded.length === 0) {
+          <p><b>Mancanze:</b> ${(b.missing || []).join(", ")}</p>
+        </div>
+      `;
+    });
+
+  } else {
     html += `<div class="card">Nessun escluso rilevato</div>`;
   }
 
