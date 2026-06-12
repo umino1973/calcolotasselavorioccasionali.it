@@ -2,70 +2,41 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TaxCopilot V6 - Funding Intelligence</title>
+<title>AI Funding Advisor</title>
 
 <style>
 body {
-  margin: 0;
   font-family: Arial;
-  background: #0b1220;
+  background: #0f172a;
   color: white;
+  margin: 0;
 }
 
 .container {
-  display: flex;
-}
-
-.sidebar {
-  width: 260px;
-  background: #111827;
-  height: 100vh;
-  padding: 20px;
-}
-
-.main {
-  flex: 1;
+  max-width: 800px;
+  margin: auto;
   padding: 30px;
-}
-
-input, textarea, select {
-  width: 100%;
-  padding: 10px;
-  margin: 6px 0;
-  border-radius: 6px;
-  border: none;
-}
-
-textarea { height: 120px; }
-
-button {
-  background: #38bdf8;
-  border: none;
-  padding: 12px;
-  margin-top: 10px;
-  cursor: pointer;
-  font-weight: bold;
-  border-radius: 6px;
-}
-
-.output {
-  margin-top: 20px;
 }
 
 .card {
   background: #1e293b;
-  padding: 15px;
-  margin: 10px 0;
-  border-radius: 10px;
+  padding: 20px;
+  border-radius: 12px;
+  margin-top: 20px;
 }
 
-.badge {
-  background: #22c55e;
-  color: black;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 12px;
+input, select {
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0;
+}
+
+button {
+  width: 100%;
+  padding: 12px;
+  background: #38bdf8;
+  border: none;
+  cursor: pointer;
 }
 </style>
 </head>
@@ -74,47 +45,30 @@ button {
 
 <div class="container">
 
-  <div class="sidebar">
-    <h2 style="color:#38bdf8">🚀 TaxCopilot V6</h2>
-    <p>Funding Intelligence Engine</p>
-    <hr>
-    <p>✔ Business Analysis</p>
-    <p>✔ Bandi Matching</p>
-    <p>✔ Funding Estimate</p>
-    <p>✔ Probability Score</p>
-  </div>
+<h1>💡 AI Funding Advisor</h1>
 
-  <div class="main">
+<div class="card">
 
-    <h1>Trova finanziamenti per la tua idea</h1>
+<input id="idea" placeholder="Idea">
+<input id="sector" placeholder="Settore">
+<select id="stage">
+  <option value="idea">Idea</option>
+  <option value="mvp">MVP</option>
+  <option value="startup">Startup</option>
+</select>
 
-    <label>Idea</label>
-    <textarea id="idea"></textarea>
+<input id="region" placeholder="Regione">
+<input id="capital" placeholder="Capitale (€)">
 
-    <label>Settore</label>
-    <input id="sector">
+<button onclick="run()">Analizza</button>
 
-    <label>Stadio</label>
-    <select id="stage">
-      <option>idea</option>
-      <option>mvp</option>
-      <option>startup</option>
-    </select>
-
-    <label>Regione</label>
-    <input id="region">
-
-    <label>Capitale disponibile (€)</label>
-    <input id="capital" type="number">
-
-    <button onclick="generateFunding()">Analizza finanziamenti</button>
-
-    <div class="output" id="output"></div>
-
-  </div>
 </div>
 
-<script src="app-v2.js"></script>
+<div id="output"></div>
+
+</div>
+
+<script src="app.js"></script>
 
 </body>
 </html>
