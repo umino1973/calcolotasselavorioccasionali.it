@@ -1,9 +1,10 @@
-exports.handler = async (event) => {
+const fs = require("fs");
+const path = require("path");
 
-  console.log("BUSINESSPLAN START");
+exports.handler = async (event) => {
+  console.log("V4 BUSINESSPLAN START");
 
   try {
-
     if (event.httpMethod !== "POST") {
       return {
         statusCode: 405,
@@ -13,78 +14,96 @@ exports.handler = async (event) => {
 
     const body = JSON.parse(event.body || "{}");
 
-    const idea = (body.idea || "").toLowerCase();
-    const sector = (body.sector || "").toLowerCase();
-    const stage = body.stage || "idea";
-    const region = (body.region || "").toLowerCase();
+    const idea = body.idea || "";
+    const sector = body.sector || "";
+    const stage = body.stage || "";
+    const region = body.region || "";
     const capital = Number(body.capital || 0);
 
-    // =========================
-    // 🧠 BANDI FALLBACK (SE JSON FALLISCE)
-    // =========================
+    const prompt = `
+Sei un consulente esperto di startup e finanziamenti pubblici in Italia.
 
-    let BANDI = [];
+Analizza questa idea imprenditoriale:
 
-    try {
-      const fs = require("fs");
-      const path = require("path");
+IDEA: ${idea}
+SETTORE: ${sector}
+STADIO: ${stage}
+REGIONE: ${region}
+CAPITALE: ${capital}€
 
-      const dbPath = path.join(process.cwd(), "data", "bandi.json");
+Rispondi in JSON con questo formato:
 
-      console.log("DB PATH:", dbPath);
-
-      BANDI = JSON.parse(fs.readFileSync(dbPath, "utf8"));
-
-    } catch (err) {
-
-      console.log("FALLBACK MODE ATTIVO:", err.message);
-
-      // fallback minimo per NON bloccare tutto
-      BANDI = [
-        {
-          name: "Smart&Start Italia",
-          entity: "Invitalia",
-          regions: ["italy", "lombardia"],
-          signals: ["ai", "startup", "innovazione", "servizi", "badanti"],
-          stages: ["idea", "mvp", "startup"],
-          min_capital: 0,
-          max_capital: 1500000
-        }
-      ];
-    }
-    
-    const text = `${idea} ${sector}`;
-
-    function score(b) {
-
-      let s = 0;
-
-      if (b.regions.includes(region)) s += 30;
-      if (b.stages.includes(stage)) s += 20;
-      if (capital >= b.min_capital && capital <= b.max_capital) s += 20;
-
-      const hits = (b.sectors || []).filter(x => text.includes(x));
-    if (hits.length === 0) {
-  s -= 20;
-} else if (hits.length === 1) {
-  s += 15;
-} else if (hits.length === 2) {
-  s += 25;
-} else {
-  s += 35;
+{
+  "summary": "analisi breve del progetto",
+  "strengths": ["..."],
+  "risks": ["..."],
+  "business_score": 0-100,
+  "funding_suggestions": ["...3-5 bandi o strumenti finanziari plausibili..."],
+  "next_steps": ["...azioni concrete..."]
 }
 
-      return Math.min(100, s);
+Non inventare numeri precisi, sii realistico.
+`;
+
+    // =========================
+    // 🤖 OPENAI CALL
+    // =========================
+
+    let aiResult = null;
+    let aiError = null;
+
+    try {
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: "Sei un consulente startup esperto." },
+            { role: "user", content: prompt }
+          ],
+          temperature: 0.4
+        })
+      });
+
+      const data = await response.json();
+
+      if (!data.choices || !data.choices[0]) {
+        throw new Error("Invalid OpenAI response");
+      }
+
+      aiResult = JSON.parse(data.choices[0].message.content);
+
+    } catch (err) {
+      console.log("OPENAI ERROR:", err.message);
+      aiError = err.message;
     }
 
-    const results = BANDI.map(b => ({
-      name: b.name,
-      entity: b.entity,
-      score: score(b)
-    }));
+    // =========================
+    // 📦 FALLBACK INTELLIGENTE
+    // =========================
 
-    const sorted = results.sort((a,b) => b.score - a.score);
-    const best = sorted[0];
+    if (!aiResult) {
+      aiResult = {
+        summary: "Analisi fallback: AI non disponibile, uso logica base.",
+        strengths: ["idea imprenditoriale presente"],
+        risks: ["AI analysis non attiva"],
+        business_score: 40,
+        funding_suggestions: [
+          "Smart&Start Italia",
+          "Fondo Innovazione PMI",
+          "Bandi regionali Lombardia"
+        ],
+        next_steps: ["Attivare API OpenAI", "Raffinare business model"]
+      };
+    }
+
+    // =========================
+    // 📊 RESPONSE
+    // =========================
 
     return {
       statusCode: 200,
@@ -93,20 +112,28 @@ exports.handler = async (event) => {
         "Access-Control-Allow-Origin": "*"
       },
       body: JSON.stringify({
-        best_match: best,
-        all_results: sorted,
-        debug: "OK"
+        input: {
+          idea,
+          sector,
+          stage,
+          region,
+          capital
+        },
+        ai: aiResult,
+        debug: {
+          openai_status: aiError ? "ERROR" : "OK",
+          error: aiError
+        }
       })
     };
 
   } catch (err) {
-
     console.log("FATAL ERROR:", err);
 
     return {
       statusCode: 500,
       body: JSON.stringify({
-        error: err.message
+        error: err.message || "Unknown error"
       })
     };
   }
