@@ -1,205 +1,252 @@
-// netlify/functions/businessplan.js
+const fs = require("fs");
+const path = require("path");
 
 exports.handler = async (event) => {
-  console.log("V10 FUNCTION START");
+console.log("V12 FUNCTION START");
 
-  try {
+try {
 
-    if (event.httpMethod !== "POST") {
-      return {
-        statusCode: 405,
-        body: JSON.stringify({ error: "Method Not Allowed" })
-      };
-    }
+```
+if (event.httpMethod !== "POST") {
+  return {
+    statusCode: 405,
+    body: JSON.stringify({
+      error: "Method Not Allowed"
+    })
+  };
+}
 
-    const body = JSON.parse(event.body || "{}");
+const body = JSON.parse(event.body || "{}");
 
-    const idea = body.idea || "";
-    const sector = body.sector || "";
-    const stage = body.stage || "";
-    const region = body.region || "";
-    const capital = Number(body.capital || 0);
+const idea = body.idea || "";
+const sector = body.sector || "";
+const stage = (body.stage || "").toLowerCase();
+const region = (body.region || "").toLowerCase();
+const capital = Number(body.capital || 0);
 
-    const text = (idea + " " + sector).toLowerCase();
+const text = (idea + " " + sector).toLowerCase();
 
-    // =========================
-    // 📦 BANDI DATABASE
-    // =========================
+// =========================
+// 📦 LOAD BANDI DATABASE
+// =========================
 
-    const BANDI = [
-      {
-        name: "Smart&Start Italia",
-        entity: "Invitalia",
-        link: "https://www.invitalia.it",
-        sectors: ["ai", "tech", "digital", "servizi"],
-        stages: ["idea", "mvp", "startup"],
-        regions: ["italy"],
-        min_capital: 0,
-        max_capital: 1500000,
-        coverage: 0.8,
-        requirements: [
-          "Startup innovativa",
-          "Sede in Italia",
-          "Progetto innovativo"
+const dbPath = path.join(
+  process.cwd(),
+  "data",
+  "bandi.json"
+);
+
+console.log("DATABASE PATH:", dbPath);
+
+const BANDI = JSON.parse(
+  fs.readFileSync(dbPath, "utf8")
+);
+
+console.log("BANDI LOADED:", BANDI.length);
+
+// =========================
+// 🎯 MATCHING ENGINE
+// =========================
+
+const results = [];
+
+for (const b of BANDI) {
+
+  const checks = {
+    sector: b.sectors.some(s =>
+      text.includes(String(s).toLowerCase())
+    ),
+
+    stage: b.stages.includes(stage),
+
+    region:
+      b.regions.includes(region) ||
+      b.regions.includes("italy") ||
+      b.regions.includes("eu"),
+
+    capital:
+      capital >= b.min_capital &&
+      capital <= b.max_capital
+  };
+
+  const passed =
+    Object.values(checks).filter(Boolean).length;
+
+  let score =
+    (checks.sector ? 30 : 0) +
+    (checks.stage ? 25 : 0) +
+    (checks.region ? 25 : 0) +
+    (checks.capital ? 20 : 0);
+
+  score = Math.max(
+    0,
+    Math.min(100, score)
+  );
+
+  let status =
+    passed === 4
+      ? "ELIGIBLE"
+      : passed >= 2
+      ? "PARTIAL"
+      : "EXCLUDED";
+
+  let probability =
+    score >= 75
+      ? "high"
+      : score >= 50
+      ? "medium"
+      : "low";
+
+  const missing = [];
+
+  if (!checks.sector)
+    missing.push("Settore non coerente");
+
+  if (!checks.stage)
+    missing.push("Fase non idonea");
+
+  if (!checks.region)
+    missing.push("Regione non valida");
+
+  if (!checks.capital)
+    missing.push("Capitale non compatibile");
+
+  const upgrade_path =
+    status === "ELIGIBLE"
+      ? [
+          "Preparare business plan",
+          "Raccogliere documenti",
+          "Inviare candidatura"
         ]
-      },
-      {
-        name: "Fondo Lombardia Start",
-        entity: "Regione Lombardia",
-        link: "https://www.bandi.regione.lombardia.it",
-        sectors: ["servizi", "innovazione"],
-        stages: ["idea", "mvp"],
-        regions: ["lombardia"],
-        min_capital: 5000,
-        max_capital: 100000,
-        coverage: 0.5,
-        requirements: [
-          "Sede Lombardia",
-          "Early stage",
-          "PMI o startup"
-        ]
-      },
-      {
-        name: "Horizon Europe",
-        entity: "European Commission",
-        link: "https://eic.ec.europa.eu",
-        sectors: ["ai", "deeptech"],
-        stages: ["startup"],
-        regions: ["eu"],
-        min_capital: 0,
-        max_capital: 9999999,
-        coverage: 0.7,
-        requirements: [
-          "Scalabilità UE",
-          "Innovazione profonda",
-          "Team strutturato"
-        ]
-      }
-    ];
+      : [
+          "Adattare progetto al bando",
+          "Colmare requisiti mancanti",
+          "Rivalutare strategia"
+        ];
 
-    // =========================
-    // 🎯 ENGINE V10
-    // =========================
+  results.push({
+    name: b.name,
+    entity: b.entity,
+    link: b.link,
+    score,
+    status,
+    probability,
+    requirements: b.requirements || [],
+    missing,
+    upgrade_path,
+    coverage: b.coverage || 0
+  });
+}
 
-    const results = [];
+// =========================
+// CLASSIFICAZIONE
+// =========================
 
-    for (const b of BANDI) {
+const eligible =
+  results.filter(
+    r => r.status === "ELIGIBLE"
+  );
 
-      const checks = {
-        sector: b.sectors.some(s => text.includes(s)),
-        stage: b.stages.includes(stage),
-        region: b.regions.includes(region.toLowerCase()),
-        capital: capital >= b.min_capital && capital <= b.max_capital
-      };
+const partial =
+  results.filter(
+    r => r.status === "PARTIAL"
+  );
 
-      const passed = Object.values(checks).filter(Boolean).length;
+const excluded =
+  results.filter(
+    r => r.status === "EXCLUDED"
+  );
 
-      let score =
-        (checks.sector ? 30 : 0) +
-        (checks.stage ? 25 : 0) +
-        (checks.region ? 25 : 0) +
-        (checks.capital ? 20 : 0);
+eligible.sort(
+  (a, b) => b.score - a.score
+);
 
-      score = Math.max(0, Math.min(100, score));
+const top = eligible.slice(0, 5);
 
-      let status =
-        passed === 4 ? "ELIGIBLE" :
-        passed >= 2 ? "PARTIAL" :
-        "EXCLUDED";
+// =========================
+// FINANCING ESTIMATE
+// =========================
 
-      let probability =
-        score >= 75 ? "high" :
-        score >= 50 ? "medium" :
-        "low";
+const maxFund = top.length
+  ? Math.max(
+      ...top.map(
+        b => b.coverage * 500000
+      )
+    )
+  : 20000;
 
-      const missing = [];
+const conservative =
+  Math.round(maxFund * 0.30);
 
-      if (!checks.sector) missing.push("Settore non coerente");
-      if (!checks.stage) missing.push("Fase non idonea");
-      if (!checks.region) missing.push("Regione non valida");
-      if (!checks.capital) missing.push("Capitale non compatibile");
+const realistic =
+  Math.round(maxFund * 0.50);
 
-      const upgrade_path =
-        status === "ELIGIBLE"
-          ? ["Preparare business plan", "Raccogliere documenti", "Inviare candidatura"]
-          : ["Adattare progetto al bando", "Colmare requisiti mancanti", "Rivalutare strategia"];
+const optimistic =
+  Math.round(maxFund * 0.75);
 
-      results.push({
-        name: b.name,
-        entity: b.entity,
-        link: b.link,
-        score,
-        status,
-        probability,
-        requirements: b.requirements,
-        missing,
-        upgrade_path,
-        coverage: b.coverage
-      });
-    }
+// =========================
+// RESPONSE
+// =========================
 
-    const eligible = results.filter(r => r.status === "ELIGIBLE");
-    const partial = results.filter(r => r.status === "PARTIAL");
-    const excluded = results.filter(r => r.status === "EXCLUDED");
+return {
+  statusCode: 200,
 
-    eligible.sort((a, b) => b.score - a.score);
+  headers: {
+    "Content-Type":
+      "application/json",
+    "Access-Control-Allow-Origin":
+      "*"
+  },
 
-    const top = eligible.slice(0, 5);
+  body: JSON.stringify({
+    version: "V12",
 
-    // =========================
-    // 💰 FUNDING ESTIMATE
-    // =========================
+    business_summary:
+      `Analisi V12 per ${sector}`,
 
-    const maxFund = top.length
-      ? Math.max(...top.map(b => b.coverage * 500000))
-      : 20000;
+    eligible,
+    partial,
+    excluded,
 
-    const conservative = Math.round(maxFund * 0.3);
-    const realistic = Math.round(maxFund * 0.5);
-    const optimistic = Math.round(maxFund * 0.75);
+    funding_opportunities: top,
 
-    // =========================
-    // 🚀 RESPONSE SAFE
-    // =========================
+    funding_estimate: {
+      conservative,
+      realistic,
+      optimistic
+    },
 
-    return {
-      statusCode: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*"
-      },
-      body: JSON.stringify({
-        business_summary: `Analisi V10 per ${sector}`,
+    overall_score:
+      top.length
+        ? top[0].score
+        : 10,
 
-        eligible,
-        partial,
-        excluded,
+    next_action:
+      top.length
+        ? `Procedi con ${top[0].name}`
+        : "Nessun bando idoneo: rivedere strategia"
+  })
+};
+```
 
-        funding_opportunities: top,
+} catch (err) {
 
-        funding_estimate: {
-          conservative,
-          realistic,
-          optimistic
-        },
+```
+console.log(
+  "V12 ERROR:",
+  err
+);
 
-        overall_score: top.length ? top[0].score : 10,
+return {
+  statusCode: 500,
 
-        next_action: top.length
-          ? `Procedi con ${top[0].name}`
-          : "Nessun bando idoneo: rivedere strategia"
-      })
-    };
+  body: JSON.stringify({
+    error:
+      err.message ||
+      "Unknown error"
+  })
+};
+```
 
-  } catch (err) {
-
-    console.log("V10 ERROR:", err);
-
-    return {
-      statusCode: 500,
-      body: JSON.stringify({
-        error: err.message || "Unknown error"
-      })
-    };
-  }
+}
 };
