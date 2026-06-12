@@ -25,35 +25,19 @@ exports.handler = async (event) => {
     // 📦 BANDI
     // =========================
 
-    const BANDI = [
-      {
-        name: "Smart&Start Italia",
-        entity: "Invitalia",
-        regions: ["italy"],
-        signals: ["startup", "innovazione", "ai", "tech", "digital"],
-        stages: ["idea", "mvp", "startup"],
-        min_capital: 0,
-        max_capital: 1500000
-      },
-      {
-        name: "Fondo Lombardia Start",
-        entity: "Regione Lombardia",
-        regions: ["lombardia"],
-        signals: ["servizi", "badanti", "pmi", "innovazione"],
-        stages: ["idea", "mvp"],
-        min_capital: 5000,
-        max_capital: 100000
-      },
-      {
-        name: "Horizon Europe",
-        entity: "EU Commission",
-        regions: ["eu", "italy", "lombardia"],
-        signals: ["ai", "deeptech", "ricerca"],
-        stages: ["startup"],
-        min_capital: 0,
-        max_capital: 99999999
-      }
-    ];
+const fs = require("fs");
+const path = require("path");
+
+const dbPath = path.join(process.cwd(), "data", "bandi.json");
+
+let BANDI = [];
+
+try {
+  BANDI = JSON.parse(fs.readFileSync(dbPath, "utf8"));
+} catch (err) {
+  console.log("Fallback bandi attivo");
+  BANDI = [];
+}
 
     // =========================
     // 🧠 SCORING V3 (soft + realistico)
