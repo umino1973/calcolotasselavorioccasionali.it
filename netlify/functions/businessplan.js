@@ -1,6 +1,6 @@
 exports.handler = async (event) => {
 
-  console.log("BUSINESSPLAN V1 START");
+  console.log("BUSINESSPLAN V3 START");
 
   try {
 
@@ -22,7 +22,7 @@ exports.handler = async (event) => {
     const text = `${idea} ${sector}`;
 
     // =========================
-    // 📦 BANDI STATICI (STABILI)
+    // 📦 BANDI
     // =========================
 
     const BANDI = [
@@ -56,45 +56,75 @@ exports.handler = async (event) => {
     ];
 
     // =========================
-    // 🧠 SCORING ENGINE
+    // 🧠 SCORING V3 (soft + realistico)
     // =========================
 
     function scoreBando(b) {
 
       let score = 0;
 
+      const semanticHits = b.signals.filter(s => text.includes(s));
+
+      score += semanticHits.length * 20;
+
       if (b.regions.includes(region)) score += 30;
+      else if (b.regions.includes("eu")) score += 10;
 
       if (b.stages.includes(stage)) score += 20;
+      else score -= 5;
 
       if (capital >= b.min_capital && capital <= b.max_capital) score += 20;
+      else score -= 10;
 
-      const matches = b.signals.filter(s => text.includes(s));
-      score += Math.min(50, matches.length * 15);
-
-      return Math.min(100, score);
+      return Math.max(0, Math.min(100, Math.round(score)));
     }
 
-    const results = BANDI.map(b => {
-
-      const score = scoreBando(b);
-
-      return {
-        name: b.name,
-        entity: b.entity,
-        score,
-        status:
-          score > 70 ? "HIGH_MATCH" :
-          score > 40 ? "MEDIUM_MATCH" :
-          "LOW_MATCH"
-      };
-    });
+    const results = BANDI.map(b => ({
+      name: b.name,
+      entity: b.entity,
+      score: scoreBando(b)
+    }));
 
     const sorted = results.sort((a, b) => b.score - a.score);
     const best = sorted[0];
 
     // =========================
-    // 🚀 OUTPUT FREE (SIMPLE + STABILE)
+    // 🧠 REPORT UMANO AI (V3)
+    // =========================
+
+    const diagnosis =
+      best.score > 75
+        ? `La tua idea è ben allineata ai finanziamenti pubblici disponibili nel settore ${sector}.`
+        : best.score > 45
+        ? `La tua idea è parzialmente finanziabile, ma richiede un adattamento strategico per aumentare le probabilità di successo.`
+        : `La tua idea non è attualmente ben allineata ai bandi disponibili e necessita riposizionamento.`;
+
+    const strategy =
+      best.score > 75
+        ? `Il bando più adatto è ${best.name}. Ti conviene preparare subito la candidatura ottimizzata.`
+        : `Conviene prima migliorare il posizionamento del progetto e poi puntare a bandi regionali o startup.`;
+
+    const risks = [
+      "Allineamento parziale con i criteri dei bandi",
+      "Fase progettuale non ancora completamente strutturata",
+      "Competizione elevata nei bandi più accessibili"
+    ];
+
+    const plan = [
+      "Raffinare la descrizione del progetto in chiave innovativa",
+      "Identificare requisiti specifici del bando principale",
+      "Preparare un business plan sintetico",
+      "Definire budget e utilizzo fondi",
+      "Verificare requisiti territoriali"
+    ];
+
+    const finalAdvice =
+      best.score > 75
+        ? "Procedi subito con la candidatura: il tuo progetto è competitivo."
+        : "Prima di candidarti, migliora il posizionamento strategico per aumentare le probabilità di successo.";
+
+    // =========================
+    // 🚀 RESPONSE
     // =========================
 
     return {
@@ -104,23 +134,13 @@ exports.handler = async (event) => {
         "Access-Control-Allow-Origin": "*"
       },
       body: JSON.stringify({
-
-        summary: {
-          interpretation:
-            best.score > 70
-              ? "Idea con buona probabilità di finanziamento"
-              : "Idea da migliorare o riposizionare"
-        },
-
+        diagnosis,
+        strategy,
+        risks,
+        plan,
+        finalAdvice,
         best_match: best,
-
-        alternatives: sorted,
-
-        next_step:
-          best.score > 70
-            ? "Prepara candidatura su bando principale"
-            : "Rafforza idea o cambia settore"
-
+        all_results: sorted
       })
     };
 
@@ -130,9 +150,7 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 500,
-      body: JSON.stringify({
-        error: err.message || "Server error"
-      })
+      body: JSON.stringify({ error: err.message })
     };
   }
 };
