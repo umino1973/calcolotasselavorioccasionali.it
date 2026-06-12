@@ -161,27 +161,68 @@ exports.handler = async (event) => {
         "Access-Control-Allow-Origin": "*"
       },
       body: JSON.stringify({
-        business_summary: `Analisi V12 per ${sector || "startup"}`,
+        return {
+  statusCode: 200,
+  headers: {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": "*"
+  },
+  body: JSON.stringify({
 
-        eligible,
-        partial,
-        excluded,
+    // =========================
+    // 🧾 BUSINESS READ (NUOVO)
+    // =========================
+    business_read: {
+      idea_interpretation: idea || "Idea non chiara",
+      sector_interpretation: sector || "Settore generico",
+      business_type: (
+        text.includes("ai") ? "AI-based service company" :
+        text.includes("servizi") ? "Service company" :
+        "Micro-impresa ibrida"
+      ),
+      maturity: stage || "idea"
+    },
 
-        funding_opportunities: top,
+    // =========================
+    // 🎯 STRATEGY
+    // =========================
+    strategy: {
+      positioning: "Lean AI-assisted micro-impresa",
+      recommended_model: "servizi + automazione AI",
+      risk_level:
+        capital < 10000 ? "alto" :
+        capital < 50000 ? "medio" : "basso"
+    },
 
-        funding_estimate: {
-          conservative,
-          realistic,
-          optimistic
-        },
+    // =========================
+    // 💰 FUNDABILITY SCORE
+    // =========================
+    fundability: {
+      score: top.length ? top[0].score : 30,
+      label:
+        top.length && top[0].score > 70 ? "Alta finanziabilità" :
+        top.length && top[0].score > 40 ? "Media finanziabilità" :
+        "Bassa finanziabilità"
+    },
 
-        overall_score: top.length ? top[0].score : 10,
+    // =========================
+    // 🧭 NEXT STEP (1 SOLO)
+    // =========================
+    next_step: top.length
+      ? `Prepara candidatura per ${top[0].name}`
+      : "Riposiziona l’idea su un settore più innovativo o regionale",
 
-        next_action: top.length
-          ? `Procedi con ${top[0].name}`
-          : "Nessun bando idoneo: rivedere strategia"
-      })
-    };
+    // =========================
+    // 📊 OPTIONAL RAW DATA (per debug)
+    // =========================
+    debug: {
+      eligible_count: eligible.length,
+      partial_count: partial.length,
+      excluded_count: excluded.length
+    }
+
+  })
+};
 
   } catch (err) {
 
