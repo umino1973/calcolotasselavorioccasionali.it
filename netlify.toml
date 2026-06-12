@@ -1,1 +1,5 @@
+[functions]
+  directory = "netlify/functions"
 
+[scheduled-functions]
+  updateBandi = "0 3 * * 1"
