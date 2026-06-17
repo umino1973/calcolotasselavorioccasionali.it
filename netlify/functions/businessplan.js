@@ -27,19 +27,24 @@ exports.handler = async (event) => {
 
     let BANDI = [];
 
-    try {
-      BANDI = JSON.parse(fs.readFileSync(dbPath, "utf8"));
-    } catch (err) {
-      console.log("DB ERROR:", err.message);
+try {
+  const dbPath = path.resolve(__dirname, "../../data/bandi.json");
+  console.log("DB PATH:", dbPath);
 
-      return {
-        statusCode: 500,
-        body: JSON.stringify({
-          error: "Database bandi non caricato",
-          detail: err.message
-        })
-      };
-    }
+  const raw = fs.readFileSync(dbPath, "utf8");
+  BANDI = JSON.parse(raw);
+
+} catch (err) {
+  console.log("DB LOAD ERROR:", err.message);
+
+  return {
+    statusCode: 500,
+    body: JSON.stringify({
+      error: "Errore caricamento bandi.json",
+      detail: err.message
+    })
+  };
+}
 
     // =========================
     // 🧠 MATCHING ENGINE
