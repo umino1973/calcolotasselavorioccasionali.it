@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 
 exports.handler = async (event) => {
-  console.log("V4 BUSINESSPLAN START");
+  console.log("V7 BUSINESSPLAN START");
 
   try {
     if (event.httpMethod !== "POST") {
@@ -14,172 +14,92 @@ exports.handler = async (event) => {
 
     const body = JSON.parse(event.body || "{}");
 
-    const idea = body.idea || "";
-    const sector = body.sector || "";
-    const stage = body.stage || "";
-    const region = body.region || "";
+    const idea = (body.idea || "").toLowerCase();
+    const sector = (body.sector || "").toLowerCase();
+    const stage = (body.stage || "").toLowerCase();
+    const region = (body.region || "").toLowerCase();
     const capital = Number(body.capital || 0);
-    const dbPath = path.join(
-  process.cwd(),
-  "data",
-  "bandi.json"
-);
-
-let BANDI = [];
-
-try {
-
-  BANDI = JSON.parse(
-    fs.readFileSync(dbPath, "utf8")
-  );
-
-  console.log("BANDI CARICATI:", BANDI.length);
-
-} catch(err) {
-
-  console.log("ERRORE LETTURA JSON:", err);
-
-  throw err;
-}
-
-const text = (
-  idea +
-  " " +
-  sector
-).toLowerCase();
-
-const matchedBandi = BANDI.map(b => {
-
-  let score = 0;
-
-  const sectorMatch =
-    (b.sectors || []).some(s =>
-      text.includes(s.toLowerCase())
-    );
-
-  if (sectorMatch) score += 40;
-
-  if ((b.stages || []).includes(stage.toLowerCase()))
-    score += 30;
-
-  if ((b.regions || []).includes(region.toLowerCase()))
-    score += 20;
-
-  if (
-    capital >= b.min_capital &&
-    capital <= b.max_capital
-  )
-    score += 10;
-
-  return {
-    ...b,
-    score
-  };
-
-})
-.sort((a,b) => b.score - a.score)
-.slice(0,3);
-
-    const prompt = `
-Sei un consulente esperto di startup e finanziamenti pubblici in Italia.
-
-BANDI SELEZIONATI DAL MOTORE:
-
-${matchedBandi.map(b => `
-- ${b.name}
-  Score compatibilità: ${b.score}
-  Requisiti: ${(b.requirements || []).join(", ")}
-`).join("\n")}
-
-Analizza questa idea imprenditoriale:
-IDEA: ${idea}
-SETTORE: ${sector}
-STADIO: ${stage}
-REGIONE: ${region}
-CAPITALE: ${capital}€
-
-Rispondi in JSON con questo formato:
-
-{
-  "summary": "analisi breve del progetto",
-  "strengths": ["..."],
-  "risks": ["..."],
-  "business_score": 0-100,
-  "funding_suggestions": ["...3-5 bandi o strumenti finanziari plausibili..."],
-  "next_steps": ["...azioni concrete..."]
-}
-
-Non inventare numeri precisi, sii realistico.
-`;
 
     // =========================
-    // 🤖 OPENAI CALL
+    // 📦 LOAD DATABASE (SAFE)
     // =========================
+    const dbPath = path.join(process.cwd(), "data", "bandi.json");
 
-    let aiResult = null;
-    let aiError = null;
+    let BANDI = [];
 
     try {
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: "Sei un consulente startup esperto." },
-            { role: "user", content: prompt }
-          ],
-          temperature: 0.4
-        })
-      });
-
-      const data = await response.json();
-
-      if (!data.choices || !data.choices[0]) {
-        throw new Error("Invalid OpenAI response");
-      }
-
-     let content = data.choices[0].message.content;
-
-// 🔥 PULIZIA MARKDOWN ```json ... ```
-content = content
-  .replace(/```json/g, "")
-  .replace(/```/g, "")
-  .trim();
-
-aiResult = JSON.parse(content);
-
+      BANDI = JSON.parse(fs.readFileSync(dbPath, "utf8"));
     } catch (err) {
-      console.log("OPENAI ERROR:", err.message);
-      aiError = err.message;
-    }
+      console.log("DB ERROR:", err.message);
 
-    // =========================
-    // 📦 FALLBACK INTELLIGENTE
-    // =========================
-
-    if (!aiResult) {
-      aiResult = {
-        summary: "Analisi fallback: AI non disponibile, uso logica base.",
-        strengths: ["idea imprenditoriale presente"],
-        risks: ["AI analysis non attiva"],
-        business_score: 40,
-        funding_suggestions: [
-          "Smart&Start Italia",
-          "Fondo Innovazione PMI",
-          "Bandi regionali Lombardia"
-        ],
-        next_steps: ["Attivare API OpenAI", "Raffinare business model"]
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          error: "Database bandi non caricato",
+          detail: err.message
+        })
       };
     }
 
     // =========================
-    // 📊 RESPONSE
+    // 🧠 MATCHING ENGINE
     // =========================
+    const text = `${idea} ${sector}`;
 
+    const scored = BANDI.map(b => {
+      let score = 0;
+
+      // sectors
+      if ((b.sectors || []).some(s => text.includes(s.toLowerCase())))
+        score += 40;
+
+      // stage
+      if ((b.stages || []).includes(stage))
+        score += 25;
+
+      // region
+      if ((b.regions || []).includes(region))
+        score += 20;
+
+      // capital
+      if (capital >= b.min_capital && capital <= b.max_capital)
+        score += 15;
+
+      return {
+        name: b.name,
+        entity: b.entity,
+        link: b.link,
+        score,
+        requirements: b.requirements || []
+      };
+    });
+
+    const sorted = scored.sort((a, b) => b.score - a.score);
+
+    const top = sorted.slice(0, 3);
+
+    const eligible = top.filter(b => b.score >= 50);
+
+    const partial = top.filter(b => b.score < 50 && b.score >= 20);
+
+    const excluded = sorted.filter(b => b.score < 20);
+
+    // =========================
+    // 💰 SIMPLE ESTIMATE
+    // =========================
+    const best = top[0] || null;
+
+    const base = best ? 10000 : 3000;
+
+    const funding = {
+      conservative: Math.round(base * 0.5),
+      realistic: Math.round(base),
+      optimistic: Math.round(base * 1.5)
+    };
+
+    // =========================
+    // 📤 RESPONSE
+    // =========================
     return {
       statusCode: 200,
       headers: {
@@ -187,17 +107,22 @@ aiResult = JSON.parse(content);
         "Access-Control-Allow-Origin": "*"
       },
       body: JSON.stringify({
-        input: {
-          idea,
-          sector,
-          stage,
-          region,
-          capital
-        },
-        ai: aiResult,
+        business_summary: `Analisi V7 per ${sector || "idea"}`,
+
+        eligible,
+        partial,
+        excluded,
+
+        funding_estimate: funding,
+
+        overall_score: best ? best.score : 10,
+
+        next_action: best
+          ? `Procedi con ${best.name}`
+          : "Rivedere idea: nessun match forte",
+
         debug: {
-          openai_status: aiError ? "ERROR" : "OK",
-          error: aiError
+          total_bandi: BANDI.length
         }
       })
     };
@@ -208,7 +133,7 @@ aiResult = JSON.parse(content);
     return {
       statusCode: 500,
       body: JSON.stringify({
-        error: err.message || "Unknown error"
+        error: err.message
       })
     };
   }
