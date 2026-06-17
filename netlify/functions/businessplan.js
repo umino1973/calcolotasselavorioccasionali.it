@@ -41,7 +41,6 @@ try {
 
   throw err;
 }
-);
 
 const text = (
   idea +
