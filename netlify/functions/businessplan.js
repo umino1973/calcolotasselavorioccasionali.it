@@ -70,8 +70,15 @@ const matchedBandi = BANDI.map(b => {
     const prompt = `
 Sei un consulente esperto di startup e finanziamenti pubblici in Italia.
 
-Analizza questa idea imprenditoriale:
+BANDI SELEZIONATI DAL MOTORE:
 
+${matchedBandi.map(b => `
+- ${b.name}
+  Score compatibilità: ${b.score}
+  Requisiti: ${(b.requirements || []).join(", ")}
+`).join("\n")}
+
+Analizza questa idea imprenditoriale:
 IDEA: ${idea}
 SETTORE: ${sector}
 STADIO: ${stage}
