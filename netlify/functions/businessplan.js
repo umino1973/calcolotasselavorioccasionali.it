@@ -25,8 +25,22 @@ exports.handler = async (event) => {
   "bandi.json"
 );
 
-const BANDI = JSON.parse(
-  fs.readFileSync(dbPath, "utf8")
+let BANDI = [];
+
+try {
+
+  BANDI = JSON.parse(
+    fs.readFileSync(dbPath, "utf8")
+  );
+
+  console.log("BANDI CARICATI:", BANDI.length);
+
+} catch(err) {
+
+  console.log("ERRORE LETTURA JSON:", err);
+
+  throw err;
+}
 );
 
 const text = (
