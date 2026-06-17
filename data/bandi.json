@@ -5,7 +5,7 @@
     "link": "https://www.invitalia.it",
     "sectors": ["ai","tech","digital","servizi"],
     "stages": ["idea","mvp","startup"],
-    "regions": ["italy"],
+   "regions": ["italy","lombardia"]
     "min_capital": 0,
     "max_capital": 1500000,
     "coverage": 0.8,
