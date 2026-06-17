@@ -19,6 +19,53 @@ exports.handler = async (event) => {
     const stage = body.stage || "";
     const region = body.region || "";
     const capital = Number(body.capital || 0);
+    const dbPath = path.join(
+  process.cwd(),
+  "data",
+  "bandi.json"
+);
+
+const BANDI = JSON.parse(
+  fs.readFileSync(dbPath, "utf8")
+);
+
+const text = (
+  idea +
+  " " +
+  sector
+).toLowerCase();
+
+const matchedBandi = BANDI.map(b => {
+
+  let score = 0;
+
+  const sectorMatch =
+    (b.sectors || []).some(s =>
+      text.includes(s.toLowerCase())
+    );
+
+  if (sectorMatch) score += 40;
+
+  if ((b.stages || []).includes(stage.toLowerCase()))
+    score += 30;
+
+  if ((b.regions || []).includes(region.toLowerCase()))
+    score += 20;
+
+  if (
+    capital >= b.min_capital &&
+    capital <= b.max_capital
+  )
+    score += 10;
+
+  return {
+    ...b,
+    score
+  };
+
+})
+.sort((a,b) => b.score - a.score)
+.slice(0,3);
 
     const prompt = `
 Sei un consulente esperto di startup e finanziamenti pubblici in Italia.
