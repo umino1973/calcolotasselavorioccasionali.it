@@ -1,56 +1,21 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-<meta charset="UTF-8">
-<title>AI Funding Advisor</title>
-
-<style>
-body {
-  font-family: Arial;
-  background: #0f172a;
-  color: white;
-  margin: 0;
-}
-
-.container {
-  max-width: 800px;
-  margin: auto;
-  padding: 30px;
-}
-
-.card {
-  background: #1e293b;
-  padding: 20px;
-  border-radius: 12px;
-  margin-top: 20px;
-}
-
-input, select {
-  width: 100%;
-  padding: 10px;
-  margin: 8px 0;
-}
-
-button {
-  width: 100%;
-  padding: 12px;
-  background: #38bdf8;
-  border: none;
-  cursor: pointer;
-}
-</style>
-</head>
-
 <body>
 
 <div class="container">
 
-<h1>💡 AI Funding Advisor</h1>
+<h1>💡 AI Funding Advisor V9</h1>
+
+<!-- 🔐 LOGIN -->
+<div class="card" id="auth">
+  <button onclick="login()">Login</button>
+  <button onclick="logout()">Logout</button>
+  <div id="userInfo"></div>
+</div>
 
 <div class="card">
 
 <input id="idea" placeholder="Idea">
 <input id="sector" placeholder="Settore">
+
 <select id="stage">
   <option value="idea">Idea</option>
   <option value="mvp">MVP</option>
@@ -58,7 +23,7 @@ button {
 </select>
 
 <input id="region" placeholder="Regione">
-<input id="capital" placeholder="Capitale (€)">
+<input id="capital" placeholder="Capitale">
 
 <button onclick="generateFunding()">Analizza</button>
 
@@ -68,7 +33,7 @@ button {
 
 </div>
 
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <script src="app.js"></script>
 
 </body>
-</html>
