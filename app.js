@@ -9,7 +9,7 @@ async function generateFunding() {
   const region = document.getElementById("region")?.value || "";
   const capital = document.getElementById("capital")?.value || 0;
 
-  output.innerHTML = `<div class="card">⏳ Generazione report consulenziale...</div>`;
+  output.innerHTML = `<div class="card">⏳ Analisi in corso...</div>`;
 
   try {
 
@@ -36,106 +36,63 @@ async function generateFunding() {
 }
 
 // =========================
-// 🧠 V14 REPORT UI
+// 🧠 RENDER REPORT
 // =========================
 
 function renderReport(data) {
 
   const output = document.getElementById("output");
   const ai = data.ai || {};
-  const top = data.engine?.top3 || [];
+  const top3 = data.engine?.top3 || [];
 
   let html = "";
-
-  // =========================
-  // HEADER PRODOTTO
-  // =========================
 
   html += `
     <div class="card">
       <h2>💡 AI Funding Advisor</h2>
-      <p><b>Score compatibilità:</b> ${ai.compatibility_score || 0}/100</p>
-      <p><b>Probabilità finanziamento:</b> ${ai.probability_financing || 0}%</p>
-    </div>
-  `;
-
-  // =========================
-  // SUMMARY
-  // =========================
-
-  html += `
-    <div class="card">
-      <h3>🧠 Analisi consulenziale</h3>
+      <p><b>Score:</b> ${ai.compatibility_score || 0}/100</p>
+      <p><b>Probabilità:</b> ${ai.probability_financing || 0}%</p>
       <p>${ai.summary || ""}</p>
     </div>
   `;
 
-  // =========================
-  // STRENGTHS
-  // =========================
-
-  html += `<div class="card"><h3>💪 Perché sei idoneo</h3>`;
-
-  if ((ai.strengths || []).length) {
-    html += ai.strengths.map(s => `✔ ${s}`).join("<br>");
-  } else {
-    html += "✔ Analisi automatica completata";
-  }
-
+  html += `<div class="card"><h3>💪 Punti di forza</h3>`;
+  html += (ai.strengths || []).join("<br>") || "Nessuno";
   html += `</div>`;
 
-  // =========================
-  // RISKS
-  // =========================
-
-  html += `<div class="card"><h3>⚠️ Criticità</h3>`;
-
-  if ((ai.risks || []).length) {
-    html += ai.risks.map(r => `⚠ ${r}`).join("<br>");
-  } else {
-    html += "⚠ Nessun rischio critico rilevato";
-  }
-
+  html += `<div class="card"><h3>⚠️ Rischi</h3>`;
+  html += (ai.risks || []).join("<br>") || "Nessuno";
   html += `</div>`;
 
-  // =========================
-  // BANDI
-  // =========================
+  html += `<div class="card"><h3>📊 Bandi</h3>`;
 
-  html += `<div class="card"><h3>📊 Bandi compatibili</h3>`;
-
-  top.forEach(b => {
-    html += `
-      <div style="margin-bottom:10px">
-        <b>${b.name}</b><br>
-        Score: ${b.score}/100
-      </div>
-    `;
+  top3.forEach(b => {
+    html += `<b>${b.name}</b> — ${b.score}/100<br>`;
   });
 
   html += `</div>`;
 
-  // =========================
-  // NEXT STEP
-  // =========================
-
-  html += `<div class="card"><h3>🚀 Next step operativo</h3>`;
-
-  if ((ai.recommendations || []).length) {
-    html += ai.recommendations.map(r => `✔ ${r}`).join("<br>");
-  } else {
-    html += "✔ Prepara business plan<br>✔ Verifica requisiti<br>✔ Contatta ente erogatore";
-  }
-
-  html += `</div>`;
+  html += `
+    <div class="card">
+      <h3>🚀 Next step</h3>
+      ${(ai.recommendations || []).join("<br>")}
+    </div>
+  `;
 
   // =========================
-  // EXPORT MOCK (HTML PDF READY)
+  // 🔥 ACTION BUTTONS
   // =========================
 
   html += `
     <div class="card">
-      <button onclick="downloadReport()">📄 Scarica report</button>
+
+      <button onclick="saveReport()">💾 Salva report</button>
+      <button onclick="downloadPDF()">📄 Scarica PDF</button>
+
+      <button onclick="shareReport()">🔗 Genera link condivisibile</button>
+
+      <div id="shareBox" style="margin-top:10px;"></div>
+
     </div>
   `;
 
@@ -143,46 +100,47 @@ function renderReport(data) {
 }
 
 // =========================
-// 📄 EXPORT HTML (MVP PDF)
+// 💾 SAVE REPORT (Netlify)
 // =========================
 
-function downloadReport() {
+async function saveReport() {
 
-  const content = document.getElementById("output").innerHTML;
+  const report = document.getElementById("output").innerHTML;
 
-  const printWindow = window.open("", "_blank");
+  const res = await fetch("/.netlify/functions/saveReport", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ report })
+  });
 
-  printWindow.document.write(`
-    <html>
-    <head>
-      <title>AI Funding Report</title>
-      <style>
-        body {
-          font-family: Arial, sans-serif;
-          padding: 30px;
-          color: #111;
-        }
-        .card {
-          border: 1px solid #ddd;
-          padding: 15px;
-          margin-bottom: 10px;
-          border-radius: 8px;
-        }
-        h2, h3 {
-          color: #0f172a;
-        }
-      </style>
-    </head>
-    <body>
-      ${content}
-      <script>
-        window.onload = function () {
-          window.print();
-        }
-      </script>
-    </body>
-    </html>
-  `);
+  const data = await res.json();
 
-  printWindow.document.close();
+  window.lastReportId = data.id;
+
+  alert("Report salvato!");
+}
+
+// =========================
+// 🔗 SHARE LINK
+// =========================
+
+function shareReport() {
+
+  if (!window.lastReportId) {
+    alert("Prima salva il report");
+    return;
+  }
+
+  const link = `${window.location.origin}/?report=${window.lastReportId}`;
+
+  document.getElementById("shareBox").innerHTML =
+    `<input style="width:100%" value="${link}" readonly onclick="this.select()">`;
+}
+
+// =========================
+// 📄 PDF (PRINT MODE)
+// =========================
+
+function downloadPDF() {
+  window.print();
 }
