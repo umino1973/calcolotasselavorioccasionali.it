@@ -1,3 +1,6 @@
+const fetch = (...args) =>
+  import("node-fetch").then(({ default: fetch }) => fetch(...args));
+
 const BANDI = require("./bandi");
 
 exports.handler = async (event) => {
@@ -13,110 +16,134 @@ exports.handler = async (event) => {
 
     const body = JSON.parse(event.body || "{}");
 
-    const idea = (body.idea || "").toLowerCase();
-    const sector = (body.sector || "").toLowerCase();
-    const stage = (body.stage || "").toLowerCase();
-    const region = (body.region || "").toLowerCase();
+    const idea = body.idea || "";
+    const sector = body.sector || "";
+    const stage = body.stage || "";
+    const region = body.region || "";
     const capital = Number(body.capital || 0);
 
-    const text = `${idea} ${sector}`;
+    const text = `${idea} ${sector}`.toLowerCase();
 
     // =========================
-    // 🧠 V11 SCORING ENGINE
+    // 🧠 PRE-SCORING (STRUCTURE)
     // =========================
 
     const scored = BANDI.map(b => {
 
       let score = 0;
-      let reasons = [];
 
-      // 1. SECTOR MATCH (peso alto)
-      const sectorMatch = (b.sectors || []).some(s =>
-        text.includes(s.toLowerCase())
-      );
+      if ((b.sectors || []).some(s => text.includes(s.toLowerCase())))
+        score += 40;
 
-      if (sectorMatch) {
-        score += 45;
-        reasons.push("Settore compatibile");
-      } else {
-        score -= 10;
-      }
-
-      // 2. STAGE MATCH
-      const stageMatch = (b.stages || []).includes(stage);
-
-      if (stageMatch) {
-        score += 25;
-        reasons.push("Fase progetto compatibile");
-      } else {
-        score -= 5;
-      }
-
-      // 3. REGION MATCH
-      const regionMatch = (b.regions || []).includes(region);
-
-      if (regionMatch) {
+      if ((b.stages || []).includes(stage.toLowerCase()))
         score += 20;
-        reasons.push("Area geografica compatibile");
-      } else {
-        score -= 8;
-      }
 
-      // 4. CAPITAL FIT (più realistico)
-      const capitalFit =
-        capital >= b.min_capital &&
-        capital <= b.max_capital;
-
-      if (capitalFit) {
+      if ((b.regions || []).includes(region.toLowerCase()))
         score += 20;
-        reasons.push("Budget compatibile");
-      } else {
-        score -= 15;
-      }
 
-      // 5. BONUS STARTUP INNOVATIVA
-      if (sector.includes("ai") || sector.includes("tech")) {
-        if (b.sectors.includes("ai")) {
-          score += 10;
-          reasons.push("Bonus innovazione tecnologica");
-        }
-      }
-
-      // clamp
-      score = Math.max(0, Math.min(100, score));
+      if (capital >= b.min_capital && capital <= b.max_capital)
+        score += 20;
 
       return {
         name: b.name,
         entity: b.entity,
-        link: b.link,
         score,
-        reasons
+        raw: b
       };
-    });
-
-    // =========================
-    // 📊 SORT
-    // =========================
-
-    scored.sort((a, b) => b.score - a.score);
+    }).sort((a, b) => b.score - a.score);
 
     const top3 = scored.slice(0, 3);
+
     const best = top3[0];
 
     // =========================
-    // 🧠 GLOBAL SCORE (REALISTIC)
+    // 🤖 AI ENGINE (V12 CORE)
     // =========================
 
-    const globalScore = best ? best.score : 0;
+    let aiAnalysis = null;
 
-    const probability =
-      globalScore >= 80 ? 90 :
-      globalScore >= 60 ? 70 :
-      globalScore >= 40 ? 45 :
-      20;
+    try {
+
+      const prompt = `
+Sei un consulente esperto di finanza agevolata in Italia.
+
+Devi analizzare questa startup:
+
+IDEA: ${idea}
+SETTORE: ${sector}
+STADIO: ${stage}
+REGIONE: ${region}
+CAPITALE: ${capital}€
+
+BANDI SELEZIONATI:
+${top3.map(b => `- ${b.name} (score base: ${b.score})`).join("\n")}
+
+OUTPUT JSON OBBLIGATORIO:
+
+{
+  "summary": "",
+  "compatibility_score": 0,
+  "probability_financing": 0,
+  "analysis": [
+    "spiegazione 1",
+    "spiegazione 2"
+  ],
+  "strengths": [],
+  "risks": [],
+  "recommendations": [],
+  "best_bands": [
+    { "name": "", "reason": "", "score": 0 }
+  ]
+}
+`;
+
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: "Sei un consulente senior di bandi e startup." },
+            { role: "user", content: prompt }
+          ],
+          temperature: 0.4
+        })
+      });
+
+      const data = await response.json();
+
+      let content = data.choices?.[0]?.message?.content || "{}";
+
+      content = content
+        .replace(/```json/g, "")
+        .replace(/```/g, "")
+        .trim();
+
+      aiAnalysis = JSON.parse(content);
+
+    } catch (err) {
+
+      aiAnalysis = {
+        summary: "AI non disponibile, fallback attivo",
+        compatibility_score: best?.score || 0,
+        probability_financing: 40,
+        analysis: ["Fallback mode"],
+        strengths: [],
+        risks: ["AI error"],
+        recommendations: ["Riprova più tardi"],
+        best_bands: top3.map(b => ({
+          name: b.name,
+          reason: "matching base engine",
+          score: b.score
+        }))
+      };
+    }
 
     // =========================
-    // 📊 RESPONSE V11
+    // 📤 RESPONSE V12
     // =========================
 
     return {
@@ -127,42 +154,14 @@ exports.handler = async (event) => {
       },
 
       body: JSON.stringify({
-
-        ai: {
-
-          summary: best
-            ? `Migliore opportunità: ${best.name}`
-            : "Nessun bando altamente compatibile trovato",
-
-          compatibility_score: globalScore,
-
-          probability_financing: probability,
-
-          breakdown_view: top3.map(b => ({
+        ai: aiAnalysis,
+        engine: {
+          top3: top3.map(b => ({
             name: b.name,
-            score: b.score,
-            reasons: b.reasons
-          })),
-
-          funding_range: best
-            ? "€10.000 - €200.000 stimati"
-            : "Non determinabile",
-
-          next_steps: best
-            ? [
-                `Verifica requisiti: ${best.name}`,
-                "Prepara business plan dettagliato",
-                "Raccogli documentazione aziendale"
-              ]
-            : [
-                "Rivedere settore o idea",
-                "Aumentare coerenza progetto-bandi",
-                "Analizzare bandi regionali alternativi"
-              ]
+            score: b.score
+          }))
         }
-
       })
-
     };
 
   } catch (err) {
