@@ -3,16 +3,22 @@ const fetch = (...args) =>
 
 const BANDI = require("./bandi");
 
+function safeJsonParse(text) {
+  try {
+    const cleaned = text
+      .replace(/```json/g, "")
+      .replace(/```/g, "")
+      .trim();
+
+    return JSON.parse(cleaned);
+  } catch (e) {
+    return null;
+  }
+}
+
 exports.handler = async (event) => {
 
   try {
-
-    if (event.httpMethod !== "POST") {
-      return {
-        statusCode: 405,
-        body: JSON.stringify({ error: "Method Not Allowed" })
-      };
-    }
 
     const body = JSON.parse(event.body || "{}");
 
@@ -25,10 +31,10 @@ exports.handler = async (event) => {
     const text = `${idea} ${sector}`.toLowerCase();
 
     // =========================
-    // 🧠 PRE-SCORING (STRUCTURE)
+    // ENGINE BASE (STABILE)
     // =========================
 
-    const scored = BANDI.map(b => {
+    const top3 = BANDI.map(b => {
 
       let score = 0;
 
@@ -36,13 +42,13 @@ exports.handler = async (event) => {
         score += 40;
 
       if ((b.stages || []).includes(stage.toLowerCase()))
-        score += 20;
+        score += 25;
 
       if ((b.regions || []).includes(region.toLowerCase()))
         score += 20;
 
       if (capital >= b.min_capital && capital <= b.max_capital)
-        score += 20;
+        score += 15;
 
       return {
         name: b.name,
@@ -50,24 +56,24 @@ exports.handler = async (event) => {
         score,
         raw: b
       };
-    }).sort((a, b) => b.score - a.score);
 
-    const top3 = scored.slice(0, 3);
+    }).sort((a, b) => b.score - a.score).slice(0, 3);
 
     const best = top3[0];
 
     // =========================
-    // 🤖 AI ENGINE (V12 CORE)
+    // 🤖 OPENAI (ROBUST)
     // =========================
 
-    let aiAnalysis = null;
+    let aiResult = null;
+    let rawResponse = "";
 
     try {
 
       const prompt = `
-Sei un consulente esperto di finanza agevolata in Italia.
+Sei un consulente italiano di bandi.
 
-Devi analizzare questa startup:
+Analizza:
 
 IDEA: ${idea}
 SETTORE: ${sector}
@@ -75,25 +81,18 @@ STADIO: ${stage}
 REGIONE: ${region}
 CAPITALE: ${capital}€
 
-BANDI SELEZIONATI:
-${top3.map(b => `- ${b.name} (score base: ${b.score})`).join("\n")}
+BANDI:
+${top3.map(b => `- ${b.name} (${b.score})`).join("\n")}
 
-OUTPUT JSON OBBLIGATORIO:
+Rispondi SOLO JSON valido, senza testo extra:
 
 {
-  "summary": "",
-  "compatibility_score": 0,
-  "probability_financing": 0,
-  "analysis": [
-    "spiegazione 1",
-    "spiegazione 2"
-  ],
-  "strengths": [],
-  "risks": [],
-  "recommendations": [],
-  "best_bands": [
-    { "name": "", "reason": "", "score": 0 }
-  ]
+  "summary": "string",
+  "probability_financing": number,
+  "analysis": ["string"],
+  "strengths": ["string"],
+  "risks": ["string"],
+  "recommendations": ["string"]
 }
 `;
 
@@ -106,44 +105,40 @@ OUTPUT JSON OBBLIGATORIO:
         body: JSON.stringify({
           model: "gpt-4o-mini",
           messages: [
-            { role: "system", content: "Sei un consulente senior di bandi e startup." },
+            { role: "system", content: "Rispondi SOLO in JSON valido." },
             { role: "user", content: prompt }
           ],
-          temperature: 0.4
+          temperature: 0.2
         })
       });
 
       const data = await response.json();
 
-      let content = data.choices?.[0]?.message?.content || "{}";
+      rawResponse = data?.choices?.[0]?.message?.content || "";
 
-      content = content
-        .replace(/```json/g, "")
-        .replace(/```/g, "")
-        .trim();
-
-      aiAnalysis = JSON.parse(content);
+      aiResult = safeJsonParse(rawResponse);
 
     } catch (err) {
+      aiResult = null;
+    }
 
-      aiAnalysis = {
-        summary: "AI non disponibile, fallback attivo",
-        compatibility_score: best?.score || 0,
-        probability_financing: 40,
-        analysis: ["Fallback mode"],
+    // =========================
+    // FALLBACK INTELLIGENTE (IMPORTANTE)
+    // =========================
+
+    if (!aiResult) {
+      aiResult = {
+        summary: "Analisi basata su motore interno (AI non disponibile)",
+        probability_financing: best ? Math.min(90, best.score) : 30,
+        analysis: ["Matching basato su regole"],
         strengths: [],
-        risks: ["AI error"],
-        recommendations: ["Riprova più tardi"],
-        best_bands: top3.map(b => ({
-          name: b.name,
-          reason: "matching base engine",
-          score: b.score
-        }))
+        risks: [],
+        recommendations: ["Riprova analisi AI più tardi"]
       };
     }
 
     // =========================
-    // 📤 RESPONSE V12
+    // RESPONSE
     // =========================
 
     return {
@@ -154,12 +149,12 @@ OUTPUT JSON OBBLIGATORIO:
       },
 
       body: JSON.stringify({
-        ai: aiAnalysis,
+        ai: aiResult,
         engine: {
-          top3: top3.map(b => ({
-            name: b.name,
-            score: b.score
-          }))
+          top3
+        },
+        debug: {
+          rawOpenAI: rawResponse
         }
       })
     };
