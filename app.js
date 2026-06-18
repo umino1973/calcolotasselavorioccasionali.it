@@ -2,12 +2,11 @@ async function generateFunding() {
 
   const output = document.getElementById("output");
 
-  if (!output) {
-    alert("Output non trovato nel DOM");
-    return;
-  }
-
-  output.innerHTML = `<div class="card">⏳ Analisi AI in corso...</div>`;
+  output.innerHTML = `
+    <div class="card">
+      ⏳ Analisi opportunità in corso...
+    </div>
+  `;
 
   const idea = document.getElementById("idea")?.value || "";
   const sector = document.getElementById("sector")?.value || "";
@@ -19,7 +18,9 @@ async function generateFunding() {
 
     const res = await fetch("/.netlify/functions/businessplan", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify({
         idea,
         sector,
@@ -40,15 +41,12 @@ async function generateFunding() {
   } catch (err) {
 
     output.innerHTML = `
-      <div class="card">❌ Errore: ${err.message}</div>
+      <div class="card">
+        ❌ Errore: ${err.message}
+      </div>
     `;
   }
 }
-
-
-// =========================
-// 🧠 RENDER
-// =========================
 
 function render(data) {
 
@@ -59,25 +57,49 @@ function render(data) {
   let html = "";
 
   html += `<h2>🧠 AI Business Report</h2>`;
-  html += `<div class="card">${ai.summary || "Nessuna analisi"}</div>`;
 
-  html += `<h3>💪 Punti di forza</h3>`;
-  html += `<div class="card">${(ai.strengths || []).join("<br>")}</div>`;
+  html += `
+    <div class="card">
+      ${ai.summary || ""}
+    </div>
+  `;
 
-  html += `<h3>⚠️ Rischi</h3>`;
-  html += `<div class="card">${(ai.risks || []).join("<br>")}</div>`;
+  html += `
+    <h3>📊 Compatibilità</h3>
+    <div class="card">
+      <strong>${ai.compatibility_label || "N/D"}</strong>
+      <br><br>
+      Score: ${ai.business_score || 0}/100
+    </div>
+  `;
 
-  html += `<h3>📊 Score</h3>`;
-  html += `<div class="card">${ai.business_score || 0}/100</div>`;
+  html += `
+    <h3>💪 Punti di forza</h3>
+    <div class="card">
+      ${(ai.strengths || []).join("<br>")}
+    </div>
+  `;
 
-  html += `<h3>💰 Finanziamenti</h3>`;
-  html += `<div class="card">${(ai.funding_suggestions || []).join("<br>")}</div>`;
+  html += `
+    <h3>⚠️ Rischi</h3>
+    <div class="card">
+      ${(ai.risks || []).join("<br>")}
+    </div>
+  `;
 
-  html += `<h3>🚀 Next step</h3>`;
-  html += `<div class="card">${(ai.next_steps || []).join("<br>")}</div>`;
+  html += `
+    <h3>💰 Opportunità individuate</h3>
+    <div class="card">
+      ${(ai.funding_suggestions || []).join("<br><br>")}
+    </div>
+  `;
 
-  html += `<h3>🧪 Debug</h3>`;
-  html += `<pre>${JSON.stringify(data.debug, null, 2)}</pre>`;
+  html += `
+    <h3>🚀 Next Step</h3>
+    <div class="card">
+      ${(ai.next_steps || []).join("<br>")}
+    </div>
+  `;
 
   output.innerHTML = html;
 }
