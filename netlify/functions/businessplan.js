@@ -30,11 +30,12 @@ exports.handler = async (event) => {
 
     try {
 
-      const dbPath = path.resolve(
-        process.cwd(),
-        "data",
-        "bandi.json"
-      );
+      const dbPath = path.join(
+  __dirname,
+  "../../data/bandi.json"
+);
+
+console.log("DB PATH:", dbPath);
 
       const raw = fs.readFileSync(
         dbPath,
