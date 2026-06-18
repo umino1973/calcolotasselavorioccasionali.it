@@ -7,9 +7,7 @@ exports.handler = async (event) => {
     if (event.httpMethod !== "POST") {
       return {
         statusCode: 405,
-        body: JSON.stringify({
-          error: "Method Not Allowed"
-        })
+        body: JSON.stringify({ error: "Method Not Allowed" })
       };
     }
 
@@ -20,6 +18,10 @@ exports.handler = async (event) => {
     const stage = (body.stage || "").toLowerCase();
     const region = (body.region || "").toLowerCase();
     const capital = Number(body.capital || 0);
+
+    // =========================
+    // 🧠 MOTORE BANDI
+    // =========================
 
     const text = `${idea} ${sector}`;
 
@@ -56,11 +58,6 @@ exports.handler = async (event) => {
         reasons.push("Capitale compatibile");
       }
 
-      // se non c'è match settore
-      if (!sectorMatch && score > 60) {
-        score = 60;
-      }
-
       return {
         ...b,
         score,
@@ -69,34 +66,94 @@ exports.handler = async (event) => {
 
     });
 
-    results.sort((a,b) => b.score - a.score);
+    results.sort((a, b) => b.score - a.score);
 
-    const top3 = results.slice(0,3);
-
+    const top3 = results.slice(0, 3);
     const best = top3[0] || null;
 
-    let compatibility = "🔴 Bassa";
+    // =========================
+    // 🧠 OPENAI ANALYSIS (SAFE)
+    // =========================
 
-    if (best && best.score >= 80)
-      compatibility = "🟢 Alta";
+    let aiAnalysis = null;
+    let aiError = null;
 
-    else if (best && best.score >= 60)
-      compatibility = "🟡 Media";
+    try {
 
-    const fundingSuggestions = top3.map(b => {
+      const prompt = `
+Sei un consulente esperto di finanziamenti e startup.
 
-      return `
-<b>${b.name}</b> (${b.score}/100)
-<br>
-${b.reasons.map(r => "✔ " + r).join("<br>")}
+Analizza questa idea:
+
+IDEA: ${idea}
+SETTORE: ${sector}
+STADIO: ${stage}
+REGIONE: ${region}
+CAPITALE: ${capital}
+
+BANDO PRINCIPALE:
+${best ? best.name : "Nessuno"}
+
+TOP 3 BANDI:
+${top3.map(b => `- ${b.name} (${b.score}/100)`).join("\n")}
+
+Rispondi in JSON:
+
+{
+  "summary": "analisi breve",
+  "strengths": ["..."],
+  "risks": ["..."],
+  "recommendation": "strategia pratica per ottenere finanziamento"
+}
 `;
 
-    });
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: "Sei un consulente per startup e bandi pubblici italiani." },
+            { role: "user", content: prompt }
+          ],
+          temperature: 0.4
+        })
+      });
+
+      const data = await response.json();
+
+      let content = data?.choices?.[0]?.message?.content || "";
+
+      // pulizia markdown
+      content = content
+        .replace(/```json/g, "")
+        .replace(/```/g, "")
+        .trim();
+
+      aiAnalysis = JSON.parse(content);
+
+    } catch (err) {
+      aiError = err.message;
+    }
+
+    // =========================
+    // 📊 COMPATIBILITY LABEL
+    // =========================
+
+    let label = "🔴 Bassa";
+
+    if (best && best.score >= 80) label = "🟢 Alta";
+    else if (best && best.score >= 60) label = "🟡 Media";
+
+    // =========================
+    // 🚀 RESPONSE
+    // =========================
 
     return {
-
       statusCode: 200,
-
       headers: {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*"
@@ -107,37 +164,45 @@ ${b.reasons.map(r => "✔ " + r).join("<br>")}
         ai: {
 
           summary:
-            best
-              ? `Migliore opportunità individuata: ${best.name}.`
-              : "Nessuna opportunità individuata.",
+            aiAnalysis?.summary ||
+            `Analisi completata. Migliore bando: ${best ? best.name : "Nessuno"}`,
 
-          compatibility_label:
-            compatibility,
+          compatibility_label: label,
 
-          strengths: [
-            "Motore incentivi completato",
-            "Analisi compatibilità eseguita"
-          ],
+          strengths:
+            aiAnalysis?.strengths ||
+            ["Motore bandi attivo", "Analisi compatibilità eseguita"],
 
           risks:
-            best && best.score >= 60
-              ? []
-              : ["Compatibilità limitata con i bandi disponibili"],
+            aiAnalysis?.risks ||
+            (best ? [] : ["Nessuna forte compatibilità rilevata"]),
 
           business_score:
-            best
-              ? best.score
-              : 0,
+            best ? best.score : 0,
 
           funding_suggestions:
-            fundingSuggestions,
+            top3.map(b =>
+              `${b.name} (${b.score}/100)\n${b.reasons.join(", ")}`
+            ),
+
+          ai_recommendation:
+            aiAnalysis?.recommendation ||
+            "Non disponibile",
 
           next_steps: [
-            "Studiare il bando principale",
+            "Validare requisiti bando principale",
             "Preparare business plan",
-            "Verificare requisiti di accesso"
+            "Verificare documentazione richiesta",
+            "Contattare ente erogatore"
           ]
 
+        },
+
+        debug: {
+          total_bandi: BANDI.length,
+          best_match: best?.name || null,
+          openai_status: aiError ? "ERROR" : "OK",
+          openai_error: aiError || null
         }
 
       })
@@ -147,40 +212,10 @@ ${b.reasons.map(r => "✔ " + r).join("<br>")}
   } catch (err) {
 
     return {
-
-      statusCode: 200,
-
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*"
-      },
-
+      statusCode: 500,
       body: JSON.stringify({
-
-        ai: {
-
-          summary: "Errore interno",
-
-          compatibility_label: "🔴 Errore",
-
-          strengths: [],
-
-          risks: [
-            err.message
-          ],
-
-          business_score: 0,
-
-          funding_suggestions: [],
-
-          next_steps: []
-
-        }
-
+        error: err.message
       })
-
     };
-
   }
-
 };
