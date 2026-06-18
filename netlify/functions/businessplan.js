@@ -21,94 +21,77 @@ exports.handler = async (event) => {
     const region = (body.region || "").toLowerCase();
     const capital = Number(body.capital || 0);
 
-    // =========================
-    // SCORING ENGINE
-    // =========================
-
     const text = `${idea} ${sector}`;
 
     const results = BANDI.map(b => {
 
       let score = 0;
+      let reasons = [];
 
       const sectorMatch =
         (b.sectors || []).some(s =>
           text.includes(s.toLowerCase())
         );
 
-      if (sectorMatch)
-        score += 40;
+      if (sectorMatch) {
+        score += 50;
+        reasons.push("Settore compatibile");
+      }
 
-      if (
-        (b.stages || []).includes(stage)
-      )
-        score += 25;
-
-      if (
-        (b.regions || []).includes(region)
-      )
+      if ((b.stages || []).includes(stage)) {
         score += 20;
+        reasons.push("Fase progetto compatibile");
+      }
+
+      if ((b.regions || []).includes(region)) {
+        score += 15;
+        reasons.push("Area geografica compatibile");
+      }
 
       if (
         capital >= b.min_capital &&
         capital <= b.max_capital
-      )
+      ) {
         score += 15;
+        reasons.push("Capitale compatibile");
+      }
+
+      // se non c'è match settore
+      if (!sectorMatch && score > 60) {
+        score = 60;
+      }
 
       return {
         ...b,
-        score
+        score,
+        reasons
       };
 
     });
 
-    results.sort((a, b) => b.score - a.score);
+    results.sort((a,b) => b.score - a.score);
 
-    const top3 = results.slice(0, 3);
+    const top3 = results.slice(0,3);
 
     const best = top3[0] || null;
 
-    // =========================
-    // REPORT
-    // =========================
+    let compatibility = "🔴 Bassa";
 
-    const strengths = [];
+    if (best && best.score >= 80)
+      compatibility = "🟢 Alta";
 
-    if (best && best.score >= 70) {
-      strengths.push(
-        "Buona compatibilità con incentivi esistenti"
-      );
-    }
+    else if (best && best.score >= 60)
+      compatibility = "🟡 Media";
 
-    if (capital > 0) {
-      strengths.push(
-        "Disponibilità di capitale iniziale"
-      );
-    }
+    const fundingSuggestions = top3.map(b => {
 
-    if (region === "lombardia") {
-      strengths.push(
-        "Regione con numerosi strumenti di sostegno"
-      );
-    }
+      return `
+<b>${b.name}</b> (${b.score}/100)
+<br>
+${b.reasons.map(r => "✔ " + r).join("<br>")}
+`;
 
-    const risks = [];
-
-    if (!best || best.score < 50) {
-      risks.push(
-        "Compatibilità limitata con i bandi attuali"
-      );
-    }
-
-    if (capital < 5000) {
-      risks.push(
-        "Capitale iniziale ridotto"
-      );
-    }
-
-    const fundingSuggestions = top3.map(
-      b => `${b.name} (${b.score}/100)`
-    );
+    });
 
     return {
 
@@ -125,12 +108,21 @@ exports.handler = async (event) => {
 
           summary:
             best
-              ? `Analisi completata. Migliore opportunità individuata: ${best.name}.`
+              ? `Migliore opportunità individuata: ${best.name}.`
               : "Nessuna opportunità individuata.",
 
-          strengths,
+          compatibility_label:
+            compatibility,
 
-          risks,
+          strengths: [
+            "Motore incentivi completato",
+            "Analisi compatibilità eseguita"
+          ],
+
+          risks:
+            best && best.score >= 60
+              ? []
+              : ["Compatibilità limitata con i bandi disponibili"],
 
           business_score:
             best
@@ -141,24 +133,10 @@ exports.handler = async (event) => {
             fundingSuggestions,
 
           next_steps: [
-            "Verificare requisiti del bando principale",
+            "Studiare il bando principale",
             "Preparare business plan",
-            "Analizzare la documentazione richiesta",
-            "Valutare eventuale startup innovativa"
+            "Verificare requisiti di accesso"
           ]
-
-        },
-
-        debug: {
-
-          total_bandi: BANDI.length,
-
-          best_match:
-            best
-              ? best.name
-              : null,
-
-          top3
 
         }
 
@@ -183,6 +161,8 @@ exports.handler = async (event) => {
 
           summary: "Errore interno",
 
+          compatibility_label: "🔴 Errore",
+
           strengths: [],
 
           risks: [
@@ -195,10 +175,6 @@ exports.handler = async (event) => {
 
           next_steps: []
 
-        },
-
-        debug: {
-          error: err.message
         }
 
       })
