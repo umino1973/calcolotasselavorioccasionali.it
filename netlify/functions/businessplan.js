@@ -6,52 +6,73 @@ function norm(s) {
 }
 
 // =========================
-// 🧠 SCORE ENGINE + EXPLANATION
+// 🧠 SCORE + EXPLANATION CORE
 // =========================
 
-function calculateScore(b, text, stage, region, capital) {
+function calculate(b, text, stage, region, capital) {
 
   let score = 0;
-  let explanation = [];
+  let reasons = [];
 
   const sectors = (b.sectors || []).map(norm);
   const stages = (b.stages || []).map(norm);
   const regions = (b.regions || []).map(norm);
 
-  // SECTOR MATCH
-  const sectorMatch = sectors.find(s => text.includes(s));
-  if (sectorMatch) {
+  if (sectors.some(s => text.includes(s))) {
     score += 40;
-    explanation.push(`+40: settore compatibile (${sectorMatch})`);
-  } else {
-    explanation.push(`0: nessuna corrispondenza settoriale`);
+    reasons.push("settore coerente");
   }
 
-  // STAGE MATCH
   if (stages.includes(stage)) {
     score += 25;
-    explanation.push(`+25: fase progetto compatibile (${stage})`);
-  } else {
-    explanation.push(`0: fase progetto non allineata`);
+    reasons.push("fase progetto compatibile");
   }
 
-  // REGION MATCH
   if (regions.includes(region)) {
     score += 25;
-    explanation.push(`+25: regione compatibile (${region})`);
-  } else {
-    explanation.push(`0: regione non supportata dal bando`);
+    reasons.push("area geografica supportata");
   }
 
-  // CAPITAL MATCH
   if (capital >= b.min_capital && capital <= b.max_capital) {
     score += 10;
-    explanation.push(`+10: capitale nel range richiesto`);
-  } else {
-    explanation.push(`0: capitale fuori range`);
+    reasons.push("capitale nel range corretto");
   }
 
-  return { score, explanation };
+  return { score, reasons };
+}
+
+// =========================
+// 🧠 IDEA OPTIMIZATION ENGINE
+// =========================
+
+function optimizeIdea(idea, sector, stage, capital) {
+
+  let improved = idea;
+  let changes = [];
+
+  // 1. verticalizzazione
+  if (!idea.includes("AI") && !sector.includes("ai")) {
+    improved += " con integrazione di AI per automazione e scalabilità";
+    changes.push("Aggiunta componente AI per aumentare innovazione percepita");
+  }
+
+  // 2. trasformazione in sistema
+  if (!idea.includes("piattaforma") && !idea.includes("software")) {
+    improved = "piattaforma digitale: " + improved;
+    changes.push("Trasformazione in piattaforma scalabile");
+  }
+
+  // 3. funding readiness
+  if (capital < 10000) {
+    changes.push("Incremento capitale iniziale migliora accesso ai bandi");
+  }
+
+  // 4. stage correction
+  if (stage === "idea") {
+    changes.push("Consigliato sviluppo MVP per aumentare bancabilità");
+  }
+
+  return { improved, changes };
 }
 
 // =========================
@@ -76,9 +97,9 @@ exports.handler = async (event) => {
     // 🧠 SCORING
     // =========================
 
-    const scored = BANDI.map(b => {
+    const results = BANDI.map(b => {
 
-      const { score, explanation } = calculateScore(
+      const { score, reasons } = calculate(
         b,
         text,
         stage,
@@ -90,70 +111,55 @@ exports.handler = async (event) => {
         name: b.name,
         entity: b.entity,
         score,
-        explanation
+        reasons
       };
 
     }).sort((a, b) => b.score - a.score);
 
-    const top3 = scored.slice(0, 3);
-    const best = top3[0];
-
-    const score = best?.score || 0;
-
-    // probabilità coerente
-    const probability = Math.round(score * 0.9);
+    const top = results[0];
+    const baseScore = top?.score || 0;
 
     // =========================
-    // 🧠 NARRAZIONE SPIEGABILE
+    // 🧠 OPTIMIZATION
     // =========================
 
-    const narrative = best
-      ? `
-Analisi completata sul tuo progetto.
+    const { improved, changes } = optimizeIdea(
+      idea,
+      sector,
+      stage,
+      capital
+    );
 
-Il bando più compatibile è: ${best.name}
+    // recalcolo semplificato AFTER optimization
+    const optimizedScore = Math.min(100, baseScore + changes.length * 6);
 
-📊 RISULTATO:
-- Score compatibilità: ${score}/100
-- Probabilità stimata: ${probability}%
+    const delta = optimizedScore - baseScore;
 
-🧠 SPIEGAZIONE DETTAGLIATA DEL PUNTEGGIO:
+    // =========================
+    // 🧠 NARRATIVE
+    // =========================
 
-${best.explanation.map(e => `- ${e}`).join("\n")}
+    const narrative = `
+Il tuo progetto è stato analizzato e può essere migliorato in modo concreto per aumentare la probabilità di accesso ai finanziamenti.
 
-👉 Interpretazione:
-Ogni punto assegnato deriva da una corrispondenza reale tra il tuo progetto e i requisiti del bando.
-Non si tratta di stime arbitrarie, ma di matching diretto su 4 fattori:
-settore, fase, regione e capitale.
+📊 SITUAZIONE ATTUALE
+- Score attuale: ${baseScore}/100
 
-👉 Conclusione:
-Il progetto è ${score >= 70 ? "fortemente compatibile" : "parzialmente compatibile"} con le opportunità attuali.
-`
-      : `
-Analisi completata.
+📈 DOPO OTTIMIZZAZIONE
+- Score potenziale: ${optimizedScore}/100
+- Miglioramento stimato: +${delta} punti
 
-Nessun bando mostra una forte compatibilità.
+🧠 NUOVA VERSIONE DEL PROGETTO:
+${improved}
 
-Il progetto necessita di riallineamento su settore, fase o requisiti economici.
+🔧 MIGLIORAMENTI APPLICABILI:
+${changes.map(c => `- ${c}`).join("\n")}
+
+👉 INTERPRETAZIONE:
+Non è l’idea a essere debole, ma il suo posizionamento strategico.
+
+Con le modifiche suggerite, il progetto diventa significativamente più competitivo nei confronti dei bandi disponibili.
 `;
-
-    // =========================
-    // 🧠 INSIGHTS
-    // =========================
-
-    const insights = [];
-
-    if (score >= 70) {
-      insights.push("Alta probabilità di accesso ai bandi principali");
-    } else {
-      insights.push("Serve ottimizzazione del posizionamento progettuale");
-    }
-
-    if (capital < 5000) {
-      insights.push("Capitale basso riduce la competitività");
-    }
-
-    insights.push("Matching basato su regole deterministiche (no stime casuali)");
 
     // =========================
     // RESPONSE
@@ -173,16 +179,20 @@ Il progetto necessita di riallineamento su settore, fase o requisiti economici.
 
           summary: narrative,
 
-          compatibility_score: score,
+          compatibility_score: baseScore,
 
-          probability_financing: probability,
+          optimized_score: optimizedScore,
 
-          insights
+          improvement_delta: delta,
+
+          improved_idea: improved,
+
+          changes
 
         },
 
         engine: {
-          top3
+          top_match: top
         }
 
       })
