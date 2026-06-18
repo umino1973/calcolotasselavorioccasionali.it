@@ -1,8 +1,8 @@
-// =========================
-// 🔐 AUTH NETLIFY IDENTITY
-// =========================
-
 let currentUser = null;
+
+// =========================
+// 🔐 NETLIFY AUTH SAFE INIT
+// =========================
 
 if (window.netlifyIdentity) {
 
@@ -34,7 +34,10 @@ function logout() {
 }
 
 function updateUserUI() {
+
   const el = document.getElementById("userInfo");
+
+  if (!el) return;
 
   if (currentUser) {
     el.innerHTML = `👤 ${currentUser.email}`;
@@ -44,19 +47,12 @@ function updateUserUI() {
 }
 
 // =========================
-// 🚀 MAIN CALL
+// 🚀 MAIN FUNCTION (NON BLOCCANTE)
 // =========================
 
 async function generateFunding() {
 
-  if (!currentUser) {
-    alert("Devi fare login");
-    return;
-  }
-
   const output = document.getElementById("output");
-
-  output.innerHTML = `<div class="card">⏳ Analisi AI in corso...</div>`;
 
   const idea = document.getElementById("idea")?.value || "";
   const sector = document.getElementById("sector")?.value || "";
@@ -64,13 +60,24 @@ async function generateFunding() {
   const region = document.getElementById("region")?.value || "";
   const capital = document.getElementById("capital")?.value || 0;
 
+  // ⚠️ FIX IMPORTANTE: NON BLOCCARE UX
+  if (!currentUser) {
+    output.innerHTML = `
+      <div class="card">
+        ⚠️ Non sei loggato<br><br>
+        Puoi comunque fare analisi base.
+      </div>
+    `;
+  }
+
+  output.innerHTML = `<div class="card">⏳ Analisi AI in corso...</div>`;
+
   try {
 
     const res = await fetch("/.netlify/functions/businessplan", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": currentUser.token.access_token
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
         idea,
@@ -78,7 +85,7 @@ async function generateFunding() {
         stage,
         region,
         capital,
-        user: currentUser.email
+        user: currentUser?.email || "guest"
       })
     });
 
@@ -88,17 +95,22 @@ async function generateFunding() {
 
   } catch (err) {
 
-    output.innerHTML = `<div class="card">❌ Errore: ${err.message}</div>`;
+    output.innerHTML = `
+      <div class="card">❌ Errore: ${err.message}</div>
+    `;
   }
 }
 
 // =========================
-// 🧠 RENDER
+// 🧠 RENDER (SAFE)
 // =========================
 
 function render(data) {
 
   const output = document.getElementById("output");
+
+  if (!output) return;
+
   const ai = data.ai || {};
 
   let html = "";
@@ -110,10 +122,10 @@ function render(data) {
   </div>`;
 
   html += `<div class="card">
-    <b>Score:</b> ${ai.compatibility_score || 0}/100
+    <b>Score compatibilità:</b> ${ai.compatibility_score || 0}/100
   </div>`;
 
-  html += `<h3>🧠 Analisi AI</h3>`;
+  html += `<h3>🧠 Analisi</h3>`;
   html += `<div class="card">${ai.summary || ""}</div>`;
 
   html += `<h3>📊 Bandi</h3>`;
@@ -123,14 +135,15 @@ function render(data) {
     html += `
       <div class="card">
         <b>${b.name}</b><br>
-        Score: ${b.score}
+        Score: ${b.score}/100
       </div>
     `;
-
   });
 
-  html += `<h3>📜 Storico cloud</h3>`;
-  html += `<div class="card">Salvataggio attivo per utente loggato</div>`;
+  html += `<h3>👤 Utente</h3>`;
+  html += `<div class="card">
+    ${data.user || "guest"}
+  </div>`;
 
   output.innerHTML = html;
 }
