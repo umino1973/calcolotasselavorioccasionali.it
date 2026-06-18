@@ -39,81 +39,67 @@ exports.handler = async (event) => {
       return {
         name: b.name,
         entity: b.entity,
-        score,
-        sectors,
-        stages,
-        regions
+        score
       };
 
     }).sort((a, b) => b.score - a.score);
 
-    const top3 = scored.slice(0, 3);
-    const best = top3[0];
-
-    const currentScore = best?.score || 0;
+    const top = scored[0];
+    const baseScore = top?.score || 0;
 
     // =========================
-    // 🧠 DIAGNOSI STRATEGICA
+    // 🧠 IDEA OPTIMIZATION CORE
     // =========================
 
-    let diagnosis = [];
-    let improvements = [];
+    let improvedIdea = idea;
 
-    if (!best) {
-      diagnosis.push("Il progetto non è ancora chiaramente posizionato su un bando specifico.");
-    } else {
-      diagnosis.push(`Il progetto è attualmente più vicino a: ${best.name}`);
+    let suggestions = [];
+
+    // 1. settorializzazione
+    if (sector.length < 5) {
+      suggestions.push("Rendi il settore più specifico (es: non 'servizi', ma 'AI per servizi domiciliari')");
+      improvedIdea = improvedIdea + " con focus su applicazione AI verticale nel settore selezionato";
     }
 
-    if (currentScore < 50) {
-      diagnosis.push("Il livello di compatibilità è basso: serve riallineamento strategico.");
-    } else if (currentScore < 80) {
-      diagnosis.push("Buona base, ma con margine di ottimizzazione significativo.");
-    } else {
-      diagnosis.push("Ottima compatibilità con strumenti di finanziamento attivi.");
+    // 2. trasformazione startup
+    if (!idea.includes("piattaforma") && !idea.includes("software")) {
+      suggestions.push("Trasforma l'idea in piattaforma scalabile o prodotto digitale");
     }
+
+    // 3. funding angle
+    if (capital < 10000) {
+      suggestions.push("Aggiungi leva iniziale: anche piccolo capitale aumenta bancabilità");
+    }
+
+    // 4. AI positioning
+    suggestions.push("Posiziona l’idea come soluzione innovativa ad alta scalabilità europea");
 
     // =========================
-    // 🧠 COME MIGLIORARE SCORE
+    // 🧠 SIMULAZIONE DOPO MIGLIORAMENTI
     // =========================
 
-    if (!scored.some(b => b.sectors.includes(sector))) {
-      improvements.push("Rafforza il posizionamento del settore (descrizione più specifica e meno generica)");
-    }
+    const improvedScore = Math.min(100, baseScore + 15 + (sector ? 10 : 0));
 
-    if (!best || !best.stages.includes(stage)) {
-      improvements.push("Allinea meglio lo stadio del progetto (idea / MVP / startup)");
-    }
-
-    if (!best || best.score < 70) {
-      improvements.push("Considera una revisione del target geografico o del mercato");
-    }
-
-    if (capital < 5000) {
-      improvements.push("Incrementare capitale iniziale migliora fortemente l’accesso ai bandi");
-    }
-
-    if (improvements.length === 0) {
-      improvements.push("Progetto già ben strutturato per accesso ai bandi principali");
-    }
+    const delta = improvedScore - baseScore;
 
     // =========================
-    // 🧠 NARRAZIONE CONSULENZIALE
+    // 🧠 OUTPUT STRATEGICO
     // =========================
 
     const narrative = `
-Il tuo progetto si colloca in un’area di innovazione con un livello di compatibilità attuale pari a ${currentScore}/100.
+Il tuo progetto è stato analizzato non solo per compatibilità attuale, ma anche per potenziale di miglioramento strategico.
 
-Questo significa che esistono reali opportunità di accesso a finanziamenti pubblici, ma la qualità dell’allineamento dipende da alcuni fattori chiave: posizionamento del settore, fase di sviluppo e coerenza territoriale.
+📊 Situazione attuale:
+- Score attuale: ${baseScore}/100
+- Score ottimizzato: ${improvedScore}/100
+- Potenziale miglioramento: +${delta} punti
 
-Dal punto di vista strategico, il sistema ha identificato ${best ? "una chiara direzione di riferimento" : "una necessità di ridefinizione del posizionamento"}.
+Questo significa che l’idea non è statica: può diventare significativamente più finanziabile con modifiche mirate.
 
-L’obiettivo non è solo trovare un bando, ma aumentare la “finanziabilità” del progetto attraverso ottimizzazioni mirate.
+L’obiettivo non è cambiare l’idea, ma raffinarne il posizionamento strategico.
 `;
 
-    // =========================
-    // RESPONSE
-    // =========================
+    const best = top;
 
     return {
 
@@ -129,32 +115,25 @@ L’obiettivo non è solo trovare un bando, ma aumentare la “finanziabilità�
 
           summary: narrative,
 
-          compatibility_score: currentScore,
+          compatibility_score: baseScore,
 
-          probability_financing:
-            currentScore >= 80 ? 90 :
-            currentScore >= 60 ? 70 :
-            currentScore >= 40 ? 50 : 25,
+          optimized_score: improvedScore,
 
-          diagnosis,
+          improvement_potential: delta,
 
-          improvements,
+          improved_idea: improvedIdea,
 
-          recommendations: best
-            ? [
-                `Approfondire bando: ${best.name}`,
-                "Raffinare descrizione progetto per aumentare matching",
-                "Preparare documentazione strutturata"
-              ]
-            : [
-                "Ridefinire il posizionamento del progetto",
-                "Specificare meglio settore e mercato",
-                "Riconsiderare fase di sviluppo"
-              ]
+          suggestions,
+
+          recommendations: [
+            "Riformulare il posizionamento dell’idea in ottica scalabile",
+            "Integrare AI come elemento centrale del modello",
+            "Validare la versione ottimizzata con bandi target"
+          ]
         },
 
         engine: {
-          top3
+          top_match: best
         }
 
       })
