@@ -6,24 +6,57 @@ function norm(s) {
 }
 
 // =========================
-// 🧠 CORE LOGIC
+// 🧠 SCORE ENGINE + EXPLANATION
 // =========================
 
-function probabilityFromScore(score) {
-  if (score >= 85) return 88;
-  if (score >= 70) return 72;
-  if (score >= 50) return 55;
-  if (score >= 30) return 35;
-  return 15;
+function calculateScore(b, text, stage, region, capital) {
+
+  let score = 0;
+  let explanation = [];
+
+  const sectors = (b.sectors || []).map(norm);
+  const stages = (b.stages || []).map(norm);
+  const regions = (b.regions || []).map(norm);
+
+  // SECTOR MATCH
+  const sectorMatch = sectors.find(s => text.includes(s));
+  if (sectorMatch) {
+    score += 40;
+    explanation.push(`+40: settore compatibile (${sectorMatch})`);
+  } else {
+    explanation.push(`0: nessuna corrispondenza settoriale`);
+  }
+
+  // STAGE MATCH
+  if (stages.includes(stage)) {
+    score += 25;
+    explanation.push(`+25: fase progetto compatibile (${stage})`);
+  } else {
+    explanation.push(`0: fase progetto non allineata`);
+  }
+
+  // REGION MATCH
+  if (regions.includes(region)) {
+    score += 25;
+    explanation.push(`+25: regione compatibile (${region})`);
+  } else {
+    explanation.push(`0: regione non supportata dal bando`);
+  }
+
+  // CAPITAL MATCH
+  if (capital >= b.min_capital && capital <= b.max_capital) {
+    score += 10;
+    explanation.push(`+10: capitale nel range richiesto`);
+  } else {
+    explanation.push(`0: capitale fuori range`);
+  }
+
+  return { score, explanation };
 }
 
-function bandLevel(score) {
-  if (score >= 85) return "Eccellente compatibilità";
-  if (score >= 70) return "Alta compatibilità";
-  if (score >= 50) return "Compatibilità media";
-  if (score >= 30) return "Compatibilità bassa";
-  return "Compatibilità molto bassa";
-}
+// =========================
+// 🧠 HANDLER
+// =========================
 
 exports.handler = async (event) => {
 
@@ -40,43 +73,24 @@ exports.handler = async (event) => {
     const text = `${idea} ${sector}`;
 
     // =========================
-    // 🧠 SCORING ENGINE (UNICO FONTE VERITÀ)
+    // 🧠 SCORING
     // =========================
 
     const scored = BANDI.map(b => {
 
-      let score = 0;
-      let reasons = [];
-
-      const sectors = (b.sectors || []).map(norm);
-      const stages = (b.stages || []).map(norm);
-      const regions = (b.regions || []).map(norm);
-
-      if (sectors.some(s => text.includes(s))) {
-        score += 40;
-        reasons.push("Il settore è coerente con il bando");
-      }
-
-      if (stages.includes(stage)) {
-        score += 25;
-        reasons.push("La fase del progetto è compatibile");
-      }
-
-      if (regions.includes(region)) {
-        score += 25;
-        reasons.push("La regione è supportata dal bando");
-      }
-
-      if (capital >= b.min_capital && capital <= b.max_capital) {
-        score += 10;
-        reasons.push("Il capitale rientra nei parametri richiesti");
-      }
+      const { score, explanation } = calculateScore(
+        b,
+        text,
+        stage,
+        region,
+        capital
+      );
 
       return {
         name: b.name,
         entity: b.entity,
         score,
-        reasons
+        explanation
       };
 
     }).sort((a, b) => b.score - a.score);
@@ -85,81 +99,61 @@ exports.handler = async (event) => {
     const best = top3[0];
 
     const score = best?.score || 0;
-    const probability = probabilityFromScore(score);
 
-    const level = bandLevel(score);
+    // probabilità coerente
+    const probability = Math.round(score * 0.9);
 
     // =========================
-    // 🧠 NARRAZIONE CONSULENTE REALE
+    // 🧠 NARRAZIONE SPIEGABILE
     // =========================
 
     const narrative = best
       ? `
-Analisi del progetto imprenditoriale completata.
+Analisi completata sul tuo progetto.
 
-Il sistema ha identificato una principale opportunità di finanziamento: ${best.name}.
+Il bando più compatibile è: ${best.name}
 
-📊 Valutazione tecnica:
-- Livello di compatibilità: ${level}
-- Score complessivo: ${score}/100
-- Probabilità stimata di accesso: ${probability}%
+📊 RISULTATO:
+- Score compatibilità: ${score}/100
+- Probabilità stimata: ${probability}%
 
-Interpretazione:
+🧠 SPIEGAZIONE DETTAGLIATA DEL PUNTEGGIO:
 
-Il progetto presenta una struttura coerente con i requisiti del bando analizzato. In particolare, gli elementi più rilevanti sono la coerenza settoriale e l’allineamento con la fase di sviluppo dichiarata.
+${best.explanation.map(e => `- ${e}`).join("\n")}
 
-Questo indica che il progetto non è solo teoricamente valido, ma potenzialmente candidabile con una corretta preparazione della documentazione.
+👉 Interpretazione:
+Ogni punto assegnato deriva da una corrispondenza reale tra il tuo progetto e i requisiti del bando.
+Non si tratta di stime arbitrarie, ma di matching diretto su 4 fattori:
+settore, fase, regione e capitale.
 
-Dal punto di vista strategico, il progetto è in una fase in cui ottimizzazioni mirate possono aumentare significativamente le probabilità di successo.
+👉 Conclusione:
+Il progetto è ${score >= 70 ? "fortemente compatibile" : "parzialmente compatibile"} con le opportunità attuali.
 `
       : `
-Analisi del progetto completata.
+Analisi completata.
 
-Non è stata identificata una corrispondenza forte con i principali strumenti di finanziamento disponibili.
+Nessun bando mostra una forte compatibilità.
 
-📊 Valutazione tecnica:
-- Livello di compatibilità: Bassa
-- Score complessivo: ${score}/100
-- Probabilità stimata di accesso: ${probability}%
-
-Interpretazione:
-
-Il progetto necessita di una revisione del posizionamento strategico per aumentare la compatibilità con i bandi pubblici.
-
-Non si tratta di un’idea non valida, ma di un problema di allineamento tra descrizione, settore e strumenti disponibili.
+Il progetto necessita di riallineamento su settore, fase o requisiti economici.
 `;
 
     // =========================
-    // 🧠 ACTIONABLE INSIGHTS
+    // 🧠 INSIGHTS
     // =========================
 
     const insights = [];
 
     if (score >= 70) {
-      insights.push("Progetto già candidabile con buona probabilità di accesso ai fondi");
+      insights.push("Alta probabilità di accesso ai bandi principali");
     } else {
-      insights.push("Necessario rafforzare il posizionamento del progetto");
+      insights.push("Serve ottimizzazione del posizionamento progettuale");
     }
 
     if (capital < 5000) {
-      insights.push("Aumentare capitale iniziale migliora significativamente la bancabilità");
+      insights.push("Capitale basso riduce la competitività");
     }
 
-    if (!sector || sector.length < 3) {
-      insights.push("Descrizione del settore troppo generica: serve maggiore specificità");
-    }
-
-    const recommendations = best
-      ? [
-          `Approfondire requisiti di ${best.name}`,
-          "Preparare business plan strutturato",
-          "Validare coerenza documentale prima della candidatura"
-        ]
-      : [
-          "Ridefinire il posizionamento del progetto",
-          "Analizzare bandi regionali alternativi",
-          "Ristrutturare la proposta di valore"
-        ];
+    insights.push("Matching basato su regole deterministiche (no stime casuali)");
 
     // =========================
     // RESPONSE
@@ -183,11 +177,8 @@ Non si tratta di un’idea non valida, ma di un problema di allineamento tra des
 
           probability_financing: probability,
 
-          level,
+          insights
 
-          insights,
-
-          recommendations
         },
 
         engine: {
