@@ -19,48 +19,30 @@ exports.handler = async (event) => {
 
     const text = `${idea} ${sector}`;
 
+    // =========================
+    // 🧠 SCORING ENGINE
+    // =========================
+
     const scored = BANDI.map(b => {
 
       let score = 0;
-      let reasons = [];
 
       const sectors = (b.sectors || []).map(norm);
       const stages = (b.stages || []).map(norm);
       const regions = (b.regions || []).map(norm);
 
-      // SECTOR MATCH
-      if (sectors.some(s => text.includes(s))) {
-        score += 40;
-        reasons.push("Il settore è perfettamente allineato al bando");
-      }
-
-      // STAGE MATCH
-      if (stages.includes(stage)) {
-        score += 25;
-        reasons.push("Lo stadio del progetto è coerente con i requisiti");
-      }
-
-      // REGION MATCH
-      if (regions.includes(region)) {
-        score += 25;
-        reasons.push("La localizzazione geografica è compatibile");
-      }
-
-      // CAPITAL MATCH
-      if (capital >= b.min_capital && capital <= b.max_capital) {
-        score += 10;
-        reasons.push("Il capitale disponibile rientra nei parametri del bando");
-      }
-
-      if (score === 0) {
-        reasons.push("Il progetto non mostra ancora forte allineamento con questo bando");
-      }
+      if (sectors.some(s => text.includes(s))) score += 40;
+      if (stages.includes(stage)) score += 25;
+      if (regions.includes(region)) score += 25;
+      if (capital >= b.min_capital && capital <= b.max_capital) score += 10;
 
       return {
         name: b.name,
         entity: b.entity,
         score,
-        reasons
+        sectors,
+        stages,
+        regions
       };
 
     }).sort((a, b) => b.score - a.score);
@@ -68,53 +50,70 @@ exports.handler = async (event) => {
     const top3 = scored.slice(0, 3);
     const best = top3[0];
 
+    const currentScore = best?.score || 0;
+
     // =========================
-    // 🧠 ANALISI UMANA
+    // 🧠 DIAGNOSI STRATEGICA
     // =========================
 
-    const narrative = best
-      ? `
-Il tuo progetto mostra una buona compatibilità con il bando "${best.name}", che al momento risulta la migliore opportunità disponibile.
+    let diagnosis = [];
+    let improvements = [];
 
-Questo significa che l’idea imprenditoriale che hai descritto rientra in un contesto già supportato da strumenti pubblici attivi, soprattutto per quanto riguarda settore, fase di sviluppo e requisiti economici.
-
-In particolare, il sistema ha identificato che:
-- il posizionamento del progetto è coerente con le linee di finanziamento disponibili
-- esiste una reale possibilità di accesso a contributi o agevolazioni
-- il livello di maturità dell’idea è adeguato per questo tipo di incentivo
-
-Tuttavia, è importante considerare che la competitività del bando richiede una progettazione strutturata e una documentazione ben preparata.
-`
-      : `
-Il tuo progetto al momento non mostra un forte allineamento con i principali bandi disponibili nel sistema.
-
-Questo non significa che non sia finanziabile, ma che potrebbe essere necessario:
-- rivedere il posizionamento del settore
-- chiarire meglio lo stadio di sviluppo
-- o ampliare la ricerca di strumenti di finanziamento più adatti
-`;
-
-    const strengths = [];
-
-    if (best?.score >= 70) {
-      strengths.push("Elevata coerenza con strumenti di finanziamento attivi");
+    if (!best) {
+      diagnosis.push("Il progetto non è ancora chiaramente posizionato su un bando specifico.");
+    } else {
+      diagnosis.push(`Il progetto è attualmente più vicino a: ${best.name}`);
     }
 
-    if (capital > 0) {
-      strengths.push("Presenza di capitale iniziale che migliora la bancabilità del progetto");
+    if (currentScore < 50) {
+      diagnosis.push("Il livello di compatibilità è basso: serve riallineamento strategico.");
+    } else if (currentScore < 80) {
+      diagnosis.push("Buona base, ma con margine di ottimizzazione significativo.");
+    } else {
+      diagnosis.push("Ottima compatibilità con strumenti di finanziamento attivi.");
     }
 
-    strengths.push("Analisi automatica basata su matching reale con bandi attivi");
+    // =========================
+    // 🧠 COME MIGLIORARE SCORE
+    // =========================
 
-    const risks = [];
+    if (!scored.some(b => b.sectors.includes(sector))) {
+      improvements.push("Rafforza il posizionamento del settore (descrizione più specifica e meno generica)");
+    }
 
-    if (!best || best.score < 60) {
-      risks.push("Allineamento non ancora ottimale con strumenti pubblici disponibili");
+    if (!best || !best.stages.includes(stage)) {
+      improvements.push("Allinea meglio lo stadio del progetto (idea / MVP / startup)");
+    }
+
+    if (!best || best.score < 70) {
+      improvements.push("Considera una revisione del target geografico o del mercato");
     }
 
     if (capital < 5000) {
-      risks.push("Capitale iniziale limitato rispetto a progetti competitivi");
+      improvements.push("Incrementare capitale iniziale migliora fortemente l’accesso ai bandi");
     }
+
+    if (improvements.length === 0) {
+      improvements.push("Progetto già ben strutturato per accesso ai bandi principali");
+    }
+
+    // =========================
+    // 🧠 NARRAZIONE CONSULENZIALE
+    // =========================
+
+    const narrative = `
+Il tuo progetto si colloca in un’area di innovazione con un livello di compatibilità attuale pari a ${currentScore}/100.
+
+Questo significa che esistono reali opportunità di accesso a finanziamenti pubblici, ma la qualità dell’allineamento dipende da alcuni fattori chiave: posizionamento del settore, fase di sviluppo e coerenza territoriale.
+
+Dal punto di vista strategico, il sistema ha identificato ${best ? "una chiara direzione di riferimento" : "una necessità di ridefinizione del posizionamento"}.
+
+L’obiettivo non è solo trovare un bando, ma aumentare la “finanziabilità” del progetto attraverso ottimizzazioni mirate.
+`;
+
+    // =========================
+    // RESPONSE
+    // =========================
 
     return {
 
@@ -130,27 +129,27 @@ Questo non significa che non sia finanziabile, ma che potrebbe essere necessario
 
           summary: narrative,
 
-          compatibility_score: best?.score || 0,
+          compatibility_score: currentScore,
 
           probability_financing:
-            best?.score >= 80 ? 90 :
-            best?.score >= 60 ? 70 :
-            best?.score >= 40 ? 50 : 25,
+            currentScore >= 80 ? 90 :
+            currentScore >= 60 ? 70 :
+            currentScore >= 40 ? 50 : 25,
 
-          strengths,
+          diagnosis,
 
-          risks,
+          improvements,
 
           recommendations: best
             ? [
-                `Approfondire il bando: ${best.name}`,
-                "Preparare una versione strutturata del business plan",
-                "Raccogliere documentazione necessaria per la candidatura"
+                `Approfondire bando: ${best.name}`,
+                "Raffinare descrizione progetto per aumentare matching",
+                "Preparare documentazione strutturata"
               ]
             : [
-                "Rivedere settore o posizionamento dell’idea",
-                "Ampliare la ricerca di bandi regionali e nazionali",
-                "Rafforzare la struttura del progetto imprenditoriale"
+                "Ridefinire il posizionamento del progetto",
+                "Specificare meglio settore e mercato",
+                "Riconsiderare fase di sviluppo"
               ]
         },
 
