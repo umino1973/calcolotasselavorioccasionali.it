@@ -1,4 +1,5 @@
 
+
 async function generateFunding() {
 
   const output = document.getElementById("output");
@@ -9,17 +10,13 @@ async function generateFunding() {
   const region = document.getElementById("region")?.value || "";
   const capital = document.getElementById("capital")?.value || 0;
 
-  output.innerHTML = `
-    <div class="card">⏳ Analisi AI in corso...</div>
-  `;
+  output.innerHTML = `<div class="card">⏳ Analisi AI in corso...</div>`;
 
   try {
 
     const res = await fetch("/.netlify/functions/businessplan", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         idea,
         sector,
@@ -35,20 +32,17 @@ async function generateFunding() {
 
   } catch (err) {
 
-    output.innerHTML = `
-      <div class="card">❌ Errore: ${err.message}</div>
-    `;
+    output.innerHTML = `<div class="card">❌ Errore: ${err.message}</div>`;
   }
 }
 
 // =========================
-// 🧠 RENDER STABILE V8
+// 🧠 V11 RENDER (FIX REASONS)
 // =========================
 
 function render(data) {
 
   const output = document.getElementById("output");
-
   const ai = data.ai || {};
 
   let html = "";
@@ -64,7 +58,7 @@ function render(data) {
   </div>`;
 
   html += `<h3>🧠 Analisi</h3>`;
-  html += `<div class="card">${ai.summary || "Nessuna analisi disponibile"}</div>`;
+  html += `<div class="card">${ai.summary || ""}</div>`;
 
   html += `<h3>📊 Bandi rilevanti</h3>`;
 
@@ -75,36 +69,23 @@ function render(data) {
       html += `
         <div class="card">
           <b>${b.name}</b><br>
-          Score: ${b.score}/100
+          Score: ${b.score}/100<br>
+          <small>${(b.reasons || []).map(r => "✔ " + r).join("<br>")}</small>
         </div>
       `;
-
     });
 
   } else {
-
     html += `<div class="card">Nessun bando trovato</div>`;
   }
 
   html += `<h3>🚀 Next Step</h3>`;
 
-  const steps = ai.next_steps;
+  const steps = ai.next_steps || [];
 
-  if (Array.isArray(steps) && steps.length > 0) {
-
-    html += `<div class="card">
-      ${steps.map(s => `✔ ${s}`).join("<br>")}
-    </div>`;
-
-  } else {
-
-    html += `<div class="card">
-      ✔ Validare idea<br>
-      ✔ Analizzare mercato<br>
-      ✔ Preparare business plan
-    </div>`;
-
-  }
+  html += `<div class="card">
+    ${steps.length ? steps.map(s => "✔ " + s).join("<br>") : "✔ Nessun dato"}
+  </div>`;
 
   output.innerHTML = html;
 }
