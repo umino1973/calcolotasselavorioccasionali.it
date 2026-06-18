@@ -1,3 +1,4 @@
+
 async function generateFunding() {
 
   const output = document.getElementById("output");
@@ -41,12 +42,13 @@ async function generateFunding() {
 }
 
 // =========================
-// 🧠 RENDER PULITO
+// 🧠 RENDER STABILE V8
 // =========================
 
 function render(data) {
 
   const output = document.getElementById("output");
+
   const ai = data.ai || {};
 
   let html = "";
@@ -66,20 +68,43 @@ function render(data) {
 
   html += `<h3>📊 Bandi rilevanti</h3>`;
 
-  (ai.breakdown_view || []).forEach(b => {
+  if (Array.isArray(ai.breakdown_view)) {
 
-    html += `
-      <div class="card">
-        <b>${b.name}</b><br>
-        Score: ${b.score}/100
-      </div>
-    `;
-  });
+    ai.breakdown_view.forEach(b => {
+
+      html += `
+        <div class="card">
+          <b>${b.name}</b><br>
+          Score: ${b.score}/100
+        </div>
+      `;
+
+    });
+
+  } else {
+
+    html += `<div class="card">Nessun bando trovato</div>`;
+  }
 
   html += `<h3>🚀 Next Step</h3>`;
-  html += `<div class="card">
-    ${(ai.next_steps || []).join("<br>")}
-  </div>`;
+
+  const steps = ai.next_steps;
+
+  if (Array.isArray(steps) && steps.length > 0) {
+
+    html += `<div class="card">
+      ${steps.map(s => `✔ ${s}`).join("<br>")}
+    </div>`;
+
+  } else {
+
+    html += `<div class="card">
+      ✔ Validare idea<br>
+      ✔ Analizzare mercato<br>
+      ✔ Preparare business plan
+    </div>`;
+
+  }
 
   output.innerHTML = html;
 }
