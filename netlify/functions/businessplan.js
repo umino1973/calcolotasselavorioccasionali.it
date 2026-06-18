@@ -5,6 +5,26 @@ function norm(s) {
   return (s || "").toString().toLowerCase().trim();
 }
 
+// =========================
+// 🧠 CORE LOGIC
+// =========================
+
+function probabilityFromScore(score) {
+  if (score >= 85) return 88;
+  if (score >= 70) return 72;
+  if (score >= 50) return 55;
+  if (score >= 30) return 35;
+  return 15;
+}
+
+function bandLevel(score) {
+  if (score >= 85) return "Eccellente compatibilità";
+  if (score >= 70) return "Alta compatibilità";
+  if (score >= 50) return "Compatibilità media";
+  if (score >= 30) return "Compatibilità bassa";
+  return "Compatibilità molto bassa";
+}
+
 exports.handler = async (event) => {
 
   try {
@@ -20,86 +40,130 @@ exports.handler = async (event) => {
     const text = `${idea} ${sector}`;
 
     // =========================
-    // 🧠 SCORING ENGINE
+    // 🧠 SCORING ENGINE (UNICO FONTE VERITÀ)
     // =========================
 
     const scored = BANDI.map(b => {
 
       let score = 0;
+      let reasons = [];
 
       const sectors = (b.sectors || []).map(norm);
       const stages = (b.stages || []).map(norm);
       const regions = (b.regions || []).map(norm);
 
-      if (sectors.some(s => text.includes(s))) score += 40;
-      if (stages.includes(stage)) score += 25;
-      if (regions.includes(region)) score += 25;
-      if (capital >= b.min_capital && capital <= b.max_capital) score += 10;
+      if (sectors.some(s => text.includes(s))) {
+        score += 40;
+        reasons.push("Il settore è coerente con il bando");
+      }
+
+      if (stages.includes(stage)) {
+        score += 25;
+        reasons.push("La fase del progetto è compatibile");
+      }
+
+      if (regions.includes(region)) {
+        score += 25;
+        reasons.push("La regione è supportata dal bando");
+      }
+
+      if (capital >= b.min_capital && capital <= b.max_capital) {
+        score += 10;
+        reasons.push("Il capitale rientra nei parametri richiesti");
+      }
 
       return {
         name: b.name,
         entity: b.entity,
-        score
+        score,
+        reasons
       };
 
     }).sort((a, b) => b.score - a.score);
 
-    const top = scored[0];
-    const baseScore = top?.score || 0;
+    const top3 = scored.slice(0, 3);
+    const best = top3[0];
+
+    const score = best?.score || 0;
+    const probability = probabilityFromScore(score);
+
+    const level = bandLevel(score);
 
     // =========================
-    // 🧠 IDEA OPTIMIZATION CORE
+    // 🧠 NARRAZIONE CONSULENTE REALE
     // =========================
 
-    let improvedIdea = idea;
+    const narrative = best
+      ? `
+Analisi del progetto imprenditoriale completata.
 
-    let suggestions = [];
+Il sistema ha identificato una principale opportunità di finanziamento: ${best.name}.
 
-    // 1. settorializzazione
-    if (sector.length < 5) {
-      suggestions.push("Rendi il settore più specifico (es: non 'servizi', ma 'AI per servizi domiciliari')");
-      improvedIdea = improvedIdea + " con focus su applicazione AI verticale nel settore selezionato";
-    }
+📊 Valutazione tecnica:
+- Livello di compatibilità: ${level}
+- Score complessivo: ${score}/100
+- Probabilità stimata di accesso: ${probability}%
 
-    // 2. trasformazione startup
-    if (!idea.includes("piattaforma") && !idea.includes("software")) {
-      suggestions.push("Trasforma l'idea in piattaforma scalabile o prodotto digitale");
-    }
+Interpretazione:
 
-    // 3. funding angle
-    if (capital < 10000) {
-      suggestions.push("Aggiungi leva iniziale: anche piccolo capitale aumenta bancabilità");
-    }
+Il progetto presenta una struttura coerente con i requisiti del bando analizzato. In particolare, gli elementi più rilevanti sono la coerenza settoriale e l’allineamento con la fase di sviluppo dichiarata.
 
-    // 4. AI positioning
-    suggestions.push("Posiziona l’idea come soluzione innovativa ad alta scalabilità europea");
+Questo indica che il progetto non è solo teoricamente valido, ma potenzialmente candidabile con una corretta preparazione della documentazione.
 
-    // =========================
-    // 🧠 SIMULAZIONE DOPO MIGLIORAMENTI
-    // =========================
+Dal punto di vista strategico, il progetto è in una fase in cui ottimizzazioni mirate possono aumentare significativamente le probabilità di successo.
+`
+      : `
+Analisi del progetto completata.
 
-    const improvedScore = Math.min(100, baseScore + 15 + (sector ? 10 : 0));
+Non è stata identificata una corrispondenza forte con i principali strumenti di finanziamento disponibili.
 
-    const delta = improvedScore - baseScore;
+📊 Valutazione tecnica:
+- Livello di compatibilità: Bassa
+- Score complessivo: ${score}/100
+- Probabilità stimata di accesso: ${probability}%
 
-    // =========================
-    // 🧠 OUTPUT STRATEGICO
-    // =========================
+Interpretazione:
 
-    const narrative = `
-Il tuo progetto è stato analizzato non solo per compatibilità attuale, ma anche per potenziale di miglioramento strategico.
+Il progetto necessita di una revisione del posizionamento strategico per aumentare la compatibilità con i bandi pubblici.
 
-📊 Situazione attuale:
-- Score attuale: ${baseScore}/100
-- Score ottimizzato: ${improvedScore}/100
-- Potenziale miglioramento: +${delta} punti
-
-Questo significa che l’idea non è statica: può diventare significativamente più finanziabile con modifiche mirate.
-
-L’obiettivo non è cambiare l’idea, ma raffinarne il posizionamento strategico.
+Non si tratta di un’idea non valida, ma di un problema di allineamento tra descrizione, settore e strumenti disponibili.
 `;
 
-    const best = top;
+    // =========================
+    // 🧠 ACTIONABLE INSIGHTS
+    // =========================
+
+    const insights = [];
+
+    if (score >= 70) {
+      insights.push("Progetto già candidabile con buona probabilità di accesso ai fondi");
+    } else {
+      insights.push("Necessario rafforzare il posizionamento del progetto");
+    }
+
+    if (capital < 5000) {
+      insights.push("Aumentare capitale iniziale migliora significativamente la bancabilità");
+    }
+
+    if (!sector || sector.length < 3) {
+      insights.push("Descrizione del settore troppo generica: serve maggiore specificità");
+    }
+
+    const recommendations = best
+      ? [
+          `Approfondire requisiti di ${best.name}`,
+          "Preparare business plan strutturato",
+          "Validare coerenza documentale prima della candidatura"
+        ]
+      : [
+          "Ridefinire il posizionamento del progetto",
+          "Analizzare bandi regionali alternativi",
+          "Ristrutturare la proposta di valore"
+        ];
+
+    // =========================
+    // RESPONSE
+    // =========================
 
     return {
 
@@ -115,25 +179,19 @@ L’obiettivo non è cambiare l’idea, ma raffinarne il posizionamento strategi
 
           summary: narrative,
 
-          compatibility_score: baseScore,
+          compatibility_score: score,
 
-          optimized_score: improvedScore,
+          probability_financing: probability,
 
-          improvement_potential: delta,
+          level,
 
-          improved_idea: improvedIdea,
+          insights,
 
-          suggestions,
-
-          recommendations: [
-            "Riformulare il posizionamento dell’idea in ottica scalabile",
-            "Integrare AI come elemento centrale del modello",
-            "Validare la versione ottimizzata con bandi target"
-          ]
+          recommendations
         },
 
         engine: {
-          top_match: best
+          top3
         }
 
       })
