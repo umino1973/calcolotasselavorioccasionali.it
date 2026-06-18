@@ -22,7 +22,7 @@ exports.handler = async (event) => {
     const text = `${idea} ${sector}`;
 
     // =========================
-    // 🧠 SCORING ENGINE (V7)
+    // 🧠 SCORING ENGINE V8
     // =========================
 
     const scored = BANDI.map(b => {
@@ -40,18 +40,15 @@ exports.handler = async (event) => {
         );
 
       if (sectorMatch) breakdown.sector = 50;
-
-      if ((b.stages || []).includes(stage))
-        breakdown.stage = 20;
-
-      if ((b.regions || []).includes(region))
-        breakdown.region = 15;
+      if ((b.stages || []).includes(stage)) breakdown.stage = 20;
+      if ((b.regions || []).includes(region)) breakdown.region = 15;
 
       if (
         capital >= b.min_capital &&
         capital <= b.max_capital
-      )
+      ) {
         breakdown.capital = 15;
+      }
 
       const score =
         breakdown.sector +
@@ -76,39 +73,52 @@ exports.handler = async (event) => {
     const best = top3[0] || null;
 
     // =========================
-    // 🧠 OPENAI (per ogni bando)
+    // 📊 PROBABILITÀ FINANZIAMENTO (V8)
     // =========================
 
-    let aiResults = [];
+    let probability = 10;
+
+    if (best) {
+      probability = Math.min(
+        95,
+        Math.round(
+          (best.score * 0.9) +
+          (capital > 10000 ? 10 : 0)
+        )
+      );
+    }
+
+    // =========================
+    // 🧠 AI LAYER (CONSULENTE)
+    // =========================
+
+    let aiData = null;
 
     try {
 
       const prompt = `
-Sei un consulente esperto di finanziamenti pubblici.
+Sei un consulente per bandi e startup in Italia.
 
-Analizza OGNI bando e spiega in modo pratico perché è compatibile o no.
+Devi produrre un report operativo.
 
-IDEA:
-${idea}
+IDEA: ${idea}
+SETTORE: ${sector}
+REGIONE: ${region}
+CAPITALE: ${capital}
 
 TOP BANDI:
 ${top3.map(b => `
-- ${b.name}
-Score: ${b.score}
-Breakdown: ${JSON.stringify(b.breakdown)}
+- ${b.name} (${b.score}/100)
 `).join("\n")}
 
 Rispondi in JSON:
 
 {
-  "analysis": [
-    {
-      "name": "...",
-      "verdict": "alta/media/bassa compatibilità",
-      "why": ["..."],
-      "how_to_improve": ["..."]
-    }
-  ]
+  "summary": "...",
+  "opportunity_strategy": "...",
+  "risks": ["..."],
+  "strengths": ["..."],
+  "recommendation": "azione concreta per aumentare probabilità di finanziamento"
 }
 `;
 
@@ -123,12 +133,9 @@ Rispondi in JSON:
           messages: [
             {
               role: "system",
-              content: "Sei un consulente esperto di bandi e startup in Italia."
+              content: "Sei un consulente esperto di finanziamenti pubblici e startup."
             },
-            {
-              role: "user",
-              content: prompt
-            }
+            { role: "user", content: prompt }
           ],
           temperature: 0.4
         })
@@ -143,23 +150,14 @@ Rispondi in JSON:
         .replace(/```/g, "")
         .trim();
 
-      aiResults = JSON.parse(content).analysis || [];
+      aiData = JSON.parse(content);
 
     } catch (err) {
-      aiResults = [];
+      aiData = null;
     }
 
     // =========================
-    // 📊 LABEL
-    // =========================
-
-    let label = "🔴 Bassa";
-
-    if (best?.score >= 80) label = "🟢 Alta";
-    else if (best?.score >= 60) label = "🟡 Media";
-
-    // =========================
-    // 🚀 RESPONSE
+    // 🧾 RESPONSE V8
     // =========================
 
     return {
@@ -173,24 +171,23 @@ Rispondi in JSON:
 
         ai: {
 
-          summary: best
-            ? `Migliore opportunità: ${best.name}`
-            : "Nessun bando rilevante",
+          summary:
+            aiData?.summary ||
+            `Analisi completata. Miglior opportunità: ${best?.name || "Nessuna"}`,
 
-          compatibility_label: label,
+          probability_financing: probability,
 
-          breakdown_view: top3.map(b => ({
-            name: b.name,
-            score: b.score,
-            breakdown: b.breakdown
-          })),
+          compatibility_score: best?.score || 0,
 
-          ai_explanation: aiResults,
+          breakdown_view: top3,
+
+          ai_insight: aiData || null,
 
           next_steps: [
-            "Preparare business plan dettagliato",
-            "Validare requisiti del bando migliore",
-            "Definire MVP del progetto"
+            "Validare requisiti bando principale",
+            "Preparare pitch",
+            "Costruire MVP minimo",
+            "Contattare ente erogatore"
           ]
 
         }
@@ -203,9 +200,7 @@ Rispondi in JSON:
 
     return {
       statusCode: 500,
-      body: JSON.stringify({
-        error: err.message
-      })
+      body: JSON.stringify({ error: err.message })
     };
   }
 };
