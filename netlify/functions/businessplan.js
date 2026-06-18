@@ -19,91 +19,96 @@ exports.handler = async (event) => {
     const region = (body.region || "").toLowerCase();
     const capital = Number(body.capital || 0);
 
-    // =========================
-    // 🧠 MOTORE BANDI
-    // =========================
-
     const text = `${idea} ${sector}`;
 
-    const results = BANDI.map(b => {
+    // =========================
+    // 🧠 SCORING ENGINE (V7)
+    // =========================
 
-      let score = 0;
-      let reasons = [];
+    const scored = BANDI.map(b => {
+
+      let breakdown = {
+        sector: 0,
+        stage: 0,
+        region: 0,
+        capital: 0
+      };
 
       const sectorMatch =
         (b.sectors || []).some(s =>
           text.includes(s.toLowerCase())
         );
 
-      if (sectorMatch) {
-        score += 50;
-        reasons.push("Settore compatibile");
-      }
+      if (sectorMatch) breakdown.sector = 50;
 
-      if ((b.stages || []).includes(stage)) {
-        score += 20;
-        reasons.push("Fase progetto compatibile");
-      }
+      if ((b.stages || []).includes(stage))
+        breakdown.stage = 20;
 
-      if ((b.regions || []).includes(region)) {
-        score += 15;
-        reasons.push("Area geografica compatibile");
-      }
+      if ((b.regions || []).includes(region))
+        breakdown.region = 15;
 
       if (
         capital >= b.min_capital &&
         capital <= b.max_capital
-      ) {
-        score += 15;
-        reasons.push("Capitale compatibile");
-      }
+      )
+        breakdown.capital = 15;
+
+      const score =
+        breakdown.sector +
+        breakdown.stage +
+        breakdown.region +
+        breakdown.capital;
 
       return {
-        ...b,
-        score,
-        reasons
+        name: b.name,
+        entity: b.entity,
+        link: b.link,
+        requirements: b.requirements || [],
+        breakdown,
+        score
       };
 
     });
 
-    results.sort((a, b) => b.score - a.score);
+    scored.sort((a, b) => b.score - a.score);
 
-    const top3 = results.slice(0, 3);
+    const top3 = scored.slice(0, 3);
     const best = top3[0] || null;
 
     // =========================
-    // 🧠 OPENAI ANALYSIS (SAFE)
+    // 🧠 OPENAI (per ogni bando)
     // =========================
 
-    let aiAnalysis = null;
-    let aiError = null;
+    let aiResults = [];
 
     try {
 
       const prompt = `
-Sei un consulente esperto di finanziamenti e startup.
+Sei un consulente esperto di finanziamenti pubblici.
 
-Analizza questa idea:
+Analizza OGNI bando e spiega in modo pratico perché è compatibile o no.
 
-IDEA: ${idea}
-SETTORE: ${sector}
-STADIO: ${stage}
-REGIONE: ${region}
-CAPITALE: ${capital}
+IDEA:
+${idea}
 
-BANDO PRINCIPALE:
-${best ? best.name : "Nessuno"}
-
-TOP 3 BANDI:
-${top3.map(b => `- ${b.name} (${b.score}/100)`).join("\n")}
+TOP BANDI:
+${top3.map(b => `
+- ${b.name}
+Score: ${b.score}
+Breakdown: ${JSON.stringify(b.breakdown)}
+`).join("\n")}
 
 Rispondi in JSON:
 
 {
-  "summary": "analisi breve",
-  "strengths": ["..."],
-  "risks": ["..."],
-  "recommendation": "strategia pratica per ottenere finanziamento"
+  "analysis": [
+    {
+      "name": "...",
+      "verdict": "alta/media/bassa compatibilità",
+      "why": ["..."],
+      "how_to_improve": ["..."]
+    }
+  ]
 }
 `;
 
@@ -116,8 +121,14 @@ Rispondi in JSON:
         body: JSON.stringify({
           model: "gpt-4o-mini",
           messages: [
-            { role: "system", content: "Sei un consulente per startup e bandi pubblici italiani." },
-            { role: "user", content: prompt }
+            {
+              role: "system",
+              content: "Sei un consulente esperto di bandi e startup in Italia."
+            },
+            {
+              role: "user",
+              content: prompt
+            }
           ],
           temperature: 0.4
         })
@@ -127,26 +138,25 @@ Rispondi in JSON:
 
       let content = data?.choices?.[0]?.message?.content || "";
 
-      // pulizia markdown
       content = content
         .replace(/```json/g, "")
         .replace(/```/g, "")
         .trim();
 
-      aiAnalysis = JSON.parse(content);
+      aiResults = JSON.parse(content).analysis || [];
 
     } catch (err) {
-      aiError = err.message;
+      aiResults = [];
     }
 
     // =========================
-    // 📊 COMPATIBILITY LABEL
+    // 📊 LABEL
     // =========================
 
     let label = "🔴 Bassa";
 
-    if (best && best.score >= 80) label = "🟢 Alta";
-    else if (best && best.score >= 60) label = "🟡 Media";
+    if (best?.score >= 80) label = "🟢 Alta";
+    else if (best?.score >= 60) label = "🟡 Media";
 
     // =========================
     // 🚀 RESPONSE
@@ -163,46 +173,26 @@ Rispondi in JSON:
 
         ai: {
 
-          summary:
-            aiAnalysis?.summary ||
-            `Analisi completata. Migliore bando: ${best ? best.name : "Nessuno"}`,
+          summary: best
+            ? `Migliore opportunità: ${best.name}`
+            : "Nessun bando rilevante",
 
           compatibility_label: label,
 
-          strengths:
-            aiAnalysis?.strengths ||
-            ["Motore bandi attivo", "Analisi compatibilità eseguita"],
+          breakdown_view: top3.map(b => ({
+            name: b.name,
+            score: b.score,
+            breakdown: b.breakdown
+          })),
 
-          risks:
-            aiAnalysis?.risks ||
-            (best ? [] : ["Nessuna forte compatibilità rilevata"]),
-
-          business_score:
-            best ? best.score : 0,
-
-          funding_suggestions:
-            top3.map(b =>
-              `${b.name} (${b.score}/100)\n${b.reasons.join(", ")}`
-            ),
-
-          ai_recommendation:
-            aiAnalysis?.recommendation ||
-            "Non disponibile",
+          ai_explanation: aiResults,
 
           next_steps: [
-            "Validare requisiti bando principale",
-            "Preparare business plan",
-            "Verificare documentazione richiesta",
-            "Contattare ente erogatore"
+            "Preparare business plan dettagliato",
+            "Validare requisiti del bando migliore",
+            "Definire MVP del progetto"
           ]
 
-        },
-
-        debug: {
-          total_bandi: BANDI.length,
-          best_match: best?.name || null,
-          openai_status: aiError ? "ERROR" : "OK",
-          openai_error: aiError || null
         }
 
       })
