@@ -1,55 +1,3 @@
-let currentUser = null;
-
-// =========================
-// 🔐 NETLIFY AUTH SAFE INIT
-// =========================
-
-if (window.netlifyIdentity) {
-
-  window.netlifyIdentity.on("init", user => {
-    currentUser = user;
-    updateUserUI();
-  });
-
-  window.netlifyIdentity.on("login", user => {
-    currentUser = user;
-    updateUserUI();
-    window.netlifyIdentity.close();
-  });
-
-  window.netlifyIdentity.on("logout", () => {
-    currentUser = null;
-    updateUserUI();
-  });
-
-  window.netlifyIdentity.init();
-}
-
-function login() {
-  window.netlifyIdentity.open();
-}
-
-function logout() {
-  window.netlifyIdentity.logout();
-}
-
-function updateUserUI() {
-
-  const el = document.getElementById("userInfo");
-
-  if (!el) return;
-
-  if (currentUser) {
-    el.innerHTML = `👤 ${currentUser.email}`;
-  } else {
-    el.innerHTML = "Non loggato";
-  }
-}
-
-// =========================
-// 🚀 MAIN FUNCTION (NON BLOCCANTE)
-// =========================
-
 async function generateFunding() {
 
   const output = document.getElementById("output");
@@ -60,17 +8,9 @@ async function generateFunding() {
   const region = document.getElementById("region")?.value || "";
   const capital = document.getElementById("capital")?.value || 0;
 
-  // ⚠️ FIX IMPORTANTE: NON BLOCCARE UX
-  if (!currentUser) {
-    output.innerHTML = `
-      <div class="card">
-        ⚠️ Non sei loggato<br><br>
-        Puoi comunque fare analisi base.
-      </div>
-    `;
-  }
-
-  output.innerHTML = `<div class="card">⏳ Analisi AI in corso...</div>`;
+  output.innerHTML = `
+    <div class="card">⏳ Analisi AI in corso...</div>
+  `;
 
   try {
 
@@ -84,8 +24,7 @@ async function generateFunding() {
         sector,
         stage,
         region,
-        capital,
-        user: currentUser?.email || "guest"
+        capital
       })
     });
 
@@ -102,20 +41,17 @@ async function generateFunding() {
 }
 
 // =========================
-// 🧠 RENDER (SAFE)
+// 🧠 RENDER PULITO
 // =========================
 
 function render(data) {
 
   const output = document.getElementById("output");
-
-  if (!output) return;
-
   const ai = data.ai || {};
 
   let html = "";
 
-  html += `<h1>💡 AI Funding Advisor V9</h1>`;
+  html += `<h1>💡 AI Funding Advisor</h1>`;
 
   html += `<div class="card">
     <b>Probabilità finanziamento:</b> ${ai.probability_financing || 0}%
@@ -126,9 +62,9 @@ function render(data) {
   </div>`;
 
   html += `<h3>🧠 Analisi</h3>`;
-  html += `<div class="card">${ai.summary || ""}</div>`;
+  html += `<div class="card">${ai.summary || "Nessuna analisi disponibile"}</div>`;
 
-  html += `<h3>📊 Bandi</h3>`;
+  html += `<h3>📊 Bandi rilevanti</h3>`;
 
   (ai.breakdown_view || []).forEach(b => {
 
@@ -140,9 +76,9 @@ function render(data) {
     `;
   });
 
-  html += `<h3>👤 Utente</h3>`;
+  html += `<h3>🚀 Next Step</h3>`;
   html += `<div class="card">
-    ${data.user || "guest"}
+    ${(ai.next_steps || []).join("<br>")}
   </div>`;
 
   output.innerHTML = html;
