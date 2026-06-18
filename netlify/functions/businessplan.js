@@ -6,13 +6,19 @@ function norm(s) {
 }
 
 // =========================
-// 🧠 SCORE + EXPLANATION CORE
+// 🧠 SCORE ENGINE (TRASPARENTE)
 // =========================
 
-function calculate(b, text, stage, region, capital) {
+function evaluate(b, text, stage, region, capital) {
 
   let score = 0;
-  let reasons = [];
+
+  const evidence = {
+    sector: false,
+    stage: false,
+    region: false,
+    capital: false
+  };
 
   const sectors = (b.sectors || []).map(norm);
   const stages = (b.stages || []).map(norm);
@@ -20,59 +26,76 @@ function calculate(b, text, stage, region, capital) {
 
   if (sectors.some(s => text.includes(s))) {
     score += 40;
-    reasons.push("settore coerente");
+    evidence.sector = true;
   }
 
   if (stages.includes(stage)) {
     score += 25;
-    reasons.push("fase progetto compatibile");
+    evidence.stage = true;
   }
 
   if (regions.includes(region)) {
     score += 25;
-    reasons.push("area geografica supportata");
+    evidence.region = true;
   }
 
   if (capital >= b.min_capital && capital <= b.max_capital) {
     score += 10;
-    reasons.push("capitale nel range corretto");
+    evidence.capital = true;
   }
 
-  return { score, reasons };
+  return { score, evidence };
 }
 
 // =========================
-// 🧠 IDEA OPTIMIZATION ENGINE
+// 🧠 REASONING ENGINE
 // =========================
 
-function optimizeIdea(idea, sector, stage, capital) {
+function buildAnalysis(b, score, evidence) {
 
-  let improved = idea;
-  let changes = [];
+  const analysis = [];
 
-  // 1. verticalizzazione
-  if (!idea.includes("AI") && !sector.includes("ai")) {
-    improved += " con integrazione di AI per automazione e scalabilità";
-    changes.push("Aggiunta componente AI per aumentare innovazione percepita");
-  }
+  // SECTOR
+  analysis.push({
+    factor: "Settore",
+    result: evidence.sector ? "Compatibile" : "Non compatibile",
+    impact: evidence.sector ? "+40 punti" : "0 punti",
+    meaning: evidence.sector
+      ? "Il progetto è allineato alle aree di investimento del bando"
+      : "Il settore dichiarato non rientra tra quelli prioritari"
+  });
 
-  // 2. trasformazione in sistema
-  if (!idea.includes("piattaforma") && !idea.includes("software")) {
-    improved = "piattaforma digitale: " + improved;
-    changes.push("Trasformazione in piattaforma scalabile");
-  }
+  // STAGE
+  analysis.push({
+    factor: "Fase progetto",
+    result: evidence.stage ? "Compatibile" : "Non compatibile",
+    impact: evidence.stage ? "+25 punti" : "0 punti",
+    meaning: evidence.stage
+      ? "La maturità del progetto è coerente con il bando"
+      : "Il livello di sviluppo non è adeguato al bando"
+  });
 
-  // 3. funding readiness
-  if (capital < 10000) {
-    changes.push("Incremento capitale iniziale migliora accesso ai bandi");
-  }
+  // REGION
+  analysis.push({
+    factor: "Area geografica",
+    result: evidence.region ? "Compatibile" : "Non compatibile",
+    impact: evidence.region ? "+25 punti" : "0 punti",
+    meaning: evidence.region
+      ? "Il bando supporta la regione indicata"
+      : "Il territorio non è coperto dal programma"
+  });
 
-  // 4. stage correction
-  if (stage === "idea") {
-    changes.push("Consigliato sviluppo MVP per aumentare bancabilità");
-  }
+  // CAPITAL
+  analysis.push({
+    factor: "Capitale",
+    result: evidence.capital ? "Compatibile" : "Non compatibile",
+    impact: evidence.capital ? "+10 punti" : "0 punti",
+    meaning: evidence.capital
+      ? "Il budget rientra nei parametri richiesti"
+      : "Il capitale è fuori dal range finanziabile"
+  });
 
-  return { improved, changes };
+  return analysis;
 }
 
 // =========================
@@ -99,7 +122,7 @@ exports.handler = async (event) => {
 
     const results = BANDI.map(b => {
 
-      const { score, reasons } = calculate(
+      const { score, evidence } = evaluate(
         b,
         text,
         stage,
@@ -111,55 +134,28 @@ exports.handler = async (event) => {
         name: b.name,
         entity: b.entity,
         score,
-        reasons
+        evidence,
+        analysis: buildAnalysis(b, score, evidence)
       };
 
     }).sort((a, b) => b.score - a.score);
 
-    const top = results[0];
-    const baseScore = top?.score || 0;
+    const top3 = results.slice(0, 3);
+    const best = top3[0];
+
+    const score = best?.score || 0;
+    const probability = Math.round(score * 0.9);
 
     // =========================
-    // 🧠 OPTIMIZATION
+    // 🧠 DECISION LOGIC
     // =========================
 
-    const { improved, changes } = optimizeIdea(
-      idea,
-      sector,
-      stage,
-      capital
-    );
-
-    // recalcolo semplificato AFTER optimization
-    const optimizedScore = Math.min(100, baseScore + changes.length * 6);
-
-    const delta = optimizedScore - baseScore;
-
-    // =========================
-    // 🧠 NARRATIVE
-    // =========================
-
-    const narrative = `
-Il tuo progetto è stato analizzato e può essere migliorato in modo concreto per aumentare la probabilità di accesso ai finanziamenti.
-
-📊 SITUAZIONE ATTUALE
-- Score attuale: ${baseScore}/100
-
-📈 DOPO OTTIMIZZAZIONE
-- Score potenziale: ${optimizedScore}/100
-- Miglioramento stimato: +${delta} punti
-
-🧠 NUOVA VERSIONE DEL PROGETTO:
-${improved}
-
-🔧 MIGLIORAMENTI APPLICABILI:
-${changes.map(c => `- ${c}`).join("\n")}
-
-👉 INTERPRETAZIONE:
-Non è l’idea a essere debole, ma il suo posizionamento strategico.
-
-Con le modifiche suggerite, il progetto diventa significativamente più competitivo nei confronti dei bandi disponibili.
-`;
+    const decision =
+      score >= 80
+        ? "Alta probabilità di accesso ai finanziamenti"
+        : score >= 50
+          ? "Accesso possibile ma da ottimizzare"
+          : "Bassa compatibilità con bandi attuali";
 
     // =========================
     // RESPONSE
@@ -177,22 +173,26 @@ Con le modifiche suggerite, il progetto diventa significativamente più competit
 
         ai: {
 
-          summary: narrative,
+          decision,
 
-          compatibility_score: baseScore,
+          score,
 
-          optimized_score: optimizedScore,
+          probability_financing: probability,
 
-          improvement_delta: delta,
+          best_match: best?.name || null,
 
-          improved_idea: improved,
+          structured_analysis: best?.analysis || [],
 
-          changes
+          interpretation: `
+Il punteggio è costruito su 4 fattori indipendenti.
+Ogni fattore contribuisce in modo deterministico al risultato finale.
 
+Non esistono stime arbitrarie: ogni punto è tracciabile a un criterio specifico.
+          `.trim()
         },
 
         engine: {
-          top_match: top
+          top3
         }
 
       })
