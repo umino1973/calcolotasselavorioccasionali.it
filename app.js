@@ -1,5 +1,4 @@
 
-
 async function generateFunding() {
 
   const output = document.getElementById("output");
@@ -10,7 +9,7 @@ async function generateFunding() {
   const region = document.getElementById("region")?.value || "";
   const capital = document.getElementById("capital")?.value || 0;
 
-  output.innerHTML = `<div class="card">⏳ Analisi AI in corso...</div>`;
+  output.innerHTML = `<div class="card">⏳ Generazione report consulenziale...</div>`;
 
   try {
 
@@ -28,7 +27,7 @@ async function generateFunding() {
 
     const data = await res.json();
 
-    render(data);
+    renderReport(data);
 
   } catch (err) {
 
@@ -37,55 +36,131 @@ async function generateFunding() {
 }
 
 // =========================
-// 🧠 V11 RENDER (FIX REASONS)
+// 🧠 V14 REPORT UI
 // =========================
 
-function render(data) {
+function renderReport(data) {
 
   const output = document.getElementById("output");
   const ai = data.ai || {};
+  const top = data.engine?.top3 || [];
 
   let html = "";
 
-  html += `<h1>💡 AI Funding Advisor</h1>`;
+  // =========================
+  // HEADER PRODOTTO
+  // =========================
 
-  html += `<div class="card">
-    <b>Probabilità finanziamento:</b> ${ai.probability_financing || 0}%
-  </div>`;
+  html += `
+    <div class="card">
+      <h2>💡 AI Funding Advisor</h2>
+      <p><b>Score compatibilità:</b> ${ai.compatibility_score || 0}/100</p>
+      <p><b>Probabilità finanziamento:</b> ${ai.probability_financing || 0}%</p>
+    </div>
+  `;
 
-  html += `<div class="card">
-    <b>Score compatibilità:</b> ${ai.compatibility_score || 0}/100
-  </div>`;
+  // =========================
+  // SUMMARY
+  // =========================
 
-  html += `<h3>🧠 Analisi</h3>`;
-  html += `<div class="card">${ai.summary || ""}</div>`;
+  html += `
+    <div class="card">
+      <h3>🧠 Analisi consulenziale</h3>
+      <p>${ai.summary || ""}</p>
+    </div>
+  `;
 
-  html += `<h3>📊 Bandi rilevanti</h3>`;
+  // =========================
+  // STRENGTHS
+  // =========================
 
-  if (Array.isArray(ai.breakdown_view)) {
+  html += `<div class="card"><h3>💪 Perché sei idoneo</h3>`;
 
-    ai.breakdown_view.forEach(b => {
-
-      html += `
-        <div class="card">
-          <b>${b.name}</b><br>
-          Score: ${b.score}/100<br>
-          <small>${(b.reasons || []).map(r => "✔ " + r).join("<br>")}</small>
-        </div>
-      `;
-    });
-
+  if ((ai.strengths || []).length) {
+    html += ai.strengths.map(s => `✔ ${s}`).join("<br>");
   } else {
-    html += `<div class="card">Nessun bando trovato</div>`;
+    html += "✔ Analisi automatica completata";
   }
 
-  html += `<h3>🚀 Next Step</h3>`;
+  html += `</div>`;
 
-  const steps = ai.next_steps || [];
+  // =========================
+  // RISKS
+  // =========================
 
-  html += `<div class="card">
-    ${steps.length ? steps.map(s => "✔ " + s).join("<br>") : "✔ Nessun dato"}
-  </div>`;
+  html += `<div class="card"><h3>⚠️ Criticità</h3>`;
+
+  if ((ai.risks || []).length) {
+    html += ai.risks.map(r => `⚠ ${r}`).join("<br>");
+  } else {
+    html += "⚠ Nessun rischio critico rilevato";
+  }
+
+  html += `</div>`;
+
+  // =========================
+  // BANDI
+  // =========================
+
+  html += `<div class="card"><h3>📊 Bandi compatibili</h3>`;
+
+  top.forEach(b => {
+    html += `
+      <div style="margin-bottom:10px">
+        <b>${b.name}</b><br>
+        Score: ${b.score}/100
+      </div>
+    `;
+  });
+
+  html += `</div>`;
+
+  // =========================
+  // NEXT STEP
+  // =========================
+
+  html += `<div class="card"><h3>🚀 Next step operativo</h3>`;
+
+  if ((ai.recommendations || []).length) {
+    html += ai.recommendations.map(r => `✔ ${r}`).join("<br>");
+  } else {
+    html += "✔ Prepara business plan<br>✔ Verifica requisiti<br>✔ Contatta ente erogatore";
+  }
+
+  html += `</div>`;
+
+  // =========================
+  // EXPORT MOCK (HTML PDF READY)
+  // =========================
+
+  html += `
+    <div class="card">
+      <button onclick="downloadReport()">📄 Scarica report</button>
+    </div>
+  `;
 
   output.innerHTML = html;
+}
+
+// =========================
+// 📄 EXPORT HTML (MVP PDF)
+// =========================
+
+function downloadReport() {
+
+  const content = document.getElementById("output").innerHTML;
+
+  const blob = new Blob([`
+    <html>
+    <head><title>AI Funding Report</title></head>
+    <body>${content}</body>
+    </html>
+  `], { type: "text/html" });
+
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "report.html";
+  a.click();
 }
