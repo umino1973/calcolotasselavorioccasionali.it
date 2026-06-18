@@ -150,17 +150,39 @@ function downloadReport() {
 
   const content = document.getElementById("output").innerHTML;
 
-  const blob = new Blob([`
+  const printWindow = window.open("", "_blank");
+
+  printWindow.document.write(`
     <html>
-    <head><title>AI Funding Report</title></head>
-    <body>${content}</body>
+    <head>
+      <title>AI Funding Report</title>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          padding: 30px;
+          color: #111;
+        }
+        .card {
+          border: 1px solid #ddd;
+          padding: 15px;
+          margin-bottom: 10px;
+          border-radius: 8px;
+        }
+        h2, h3 {
+          color: #0f172a;
+        }
+      </style>
+    </head>
+    <body>
+      ${content}
+      <script>
+        window.onload = function () {
+          window.print();
+        }
+      </script>
+    </body>
     </html>
-  `], { type: "text/html" });
+  `);
 
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "report.html";
-  a.click();
+  printWindow.document.close();
 }
