@@ -1,5 +1,4 @@
-const fs = require("fs");
-const path = require("path");
+const BANDI = require("./bandi");
 
 exports.handler = async (event) => {
 
@@ -26,15 +25,7 @@ exports.handler = async (event) => {
     // CARICA BANDI
     // =========================
 
-    let BANDI = [];
-
-    try {
-
-      const dbPath = path.join(
-  __dirname,
-  "../../data/bandi.json"
-);
-
+  
 console.log("DB PATH:", dbPath);
 
       const raw = fs.readFileSync(
